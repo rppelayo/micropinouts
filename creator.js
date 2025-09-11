@@ -38,12 +38,14 @@ class PinoutCreator {
         
         document.getElementById('pinCount').addEventListener('change', (e) => {
             this.currentPinCount = parseInt(e.target.value);
+            this.validatePinCountForPackage();
             this.generateInitialPins();
             this.updatePreview();
         });
         
         document.getElementById('packageType').addEventListener('change', (e) => {
             this.packageType = e.target.value;
+            this.validatePinCountForPackage();
             this.updatePreview();
         });
         
@@ -99,6 +101,40 @@ class PinoutCreator {
         } else {
             imageUploadGroup.style.display = 'none';
             imageUrlGroup.style.display = 'none';
+        }
+    }
+    
+    validatePinCountForPackage() {
+        const pinCountSelect = document.getElementById('pinCount');
+        const currentPinCount = parseInt(pinCountSelect.value);
+        
+        // Package-specific pin count limits
+        const packageLimits = {
+            'DIP': 64,      // DIP packages max out around 64 pins
+            'SOIC': 28,     // SOIC packages typically max out around 28 pins
+            'QFP': 100,     // QFP packages can go up to 100+ pins
+            'BGA': 1000,    // BGA packages can have very high pin counts
+            'custom': 1000  // Custom packages have no practical limit
+        };
+        
+        const maxPins = packageLimits[this.packageType] || 1000;
+        
+        if (currentPinCount > maxPins) {
+            // Find the highest valid pin count for this package
+            const validPinCounts = Array.from(pinCountSelect.options)
+                .map(option => parseInt(option.value))
+                .filter(count => count <= maxPins)
+                .sort((a, b) => b - a);
+            
+            if (validPinCounts.length > 0) {
+                const newPinCount = validPinCounts[0];
+                pinCountSelect.value = newPinCount;
+                this.currentPinCount = newPinCount;
+                this.generateInitialPins();
+                
+                // Show a warning
+                alert(`Warning: ${this.packageType} packages typically don't support ${currentPinCount} pins. Adjusted to ${newPinCount} pins.`);
+            }
         }
     }
     
