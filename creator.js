@@ -314,7 +314,7 @@ class PinoutCreator {
         // Set CSS variables
         previewContainer.style.setProperty('--pin-count', totalPinCount);
         previewContainer.style.setProperty('--chip-height', `${chipHeight}px`);
-        previewContainer.style.setProperty('--pin-spacing', `${chipHeight / totalPinCount}px`);
+        previewContainer.style.setProperty('--pin-spacing', `${chipHeight / (maxSidePinCount * 2)}px`);
         
         // Generate pinout structure
         this.generatePinoutStructure(previewContainer);
