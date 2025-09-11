@@ -754,7 +754,7 @@ class PinoutCreator {
             height: 8px;
             background: #7f8c8d;
             border-radius: 2px;
-            right: -20px;
+            right: -10px;
         }
 
         .right-pins .pin::before {
@@ -764,7 +764,7 @@ class PinoutCreator {
             height: 8px;
             background: #7f8c8d;
             border-radius: 2px;
-            left: -20px;
+            left: -10px;
         }
 
         .chip-body {
