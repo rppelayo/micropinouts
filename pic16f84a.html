@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PIC16F84A Pinout - MicroPinouts</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="pinout-styles.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="logo">
+                    <a href="index.html">MicroPinouts</a>
+                </h1>
+                <nav class="nav">
+                    <a href="index.html" class="nav-link">Home</a>
+                    <a href="pic16f84a.html" class="nav-link active">PIC16F84A</a>
+                    <a href="esp32.html" class="nav-link">ESP32</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <div class="content-grid">
+                <div class="pinout-section">
+                    <div class="section-header">
+                        <h2>PIC16F84A Microcontroller</h2>
+                        <p class="section-subtitle">18-pin DIP Package - 8-bit RISC Microcontroller</p>
+                    </div>
+                    
+                    <div class="chip-diagram pic16f84a-pinout">
+                        <div class="left-pins">
+                            <div class="pin-column">
+                                <div class="pin" data-pin="1">
+                                    <div class="pin-label power-positive">MCLR/VPP</div>
+                                </div>
+                                <div class="pin" data-pin="2">
+                                    <div class="pin-label gpio">RA0</div>
+                                </div>
+                                <div class="pin" data-pin="3">
+                                    <div class="pin-label gpio">RA1</div>
+                                </div>
+                                <div class="pin" data-pin="4">
+                                    <div class="pin-label gpio">RA2</div>
+                                </div>
+                                <div class="pin" data-pin="5">
+                                    <div class="pin-label gpio">RA3</div>
+                                </div>
+                                <div class="pin" data-pin="6">
+                                    <div class="pin-label gpio">RA4/T0CKI</div>
+                                </div>
+                                <div class="pin" data-pin="7">
+                                    <div class="pin-label power-negative">VSS</div>
+                                </div>
+                                <div class="pin" data-pin="8">
+                                    <div class="pin-label clock">OSC1/CLKIN</div>
+                                </div>
+                                <div class="pin" data-pin="9">
+                                    <div class="pin-label clock">OSC2/CLKOUT</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="chip-body">
+                            <div class="pin-indicator"></div>
+                            <div class="pin-numbers-left">
+                                <div class="pin-num">1</div>
+                                <div class="pin-num">2</div>
+                                <div class="pin-num">3</div>
+                                <div class="pin-num">4</div>
+                                <div class="pin-num">5</div>
+                                <div class="pin-num">6</div>
+                                <div class="pin-num">7</div>
+                                <div class="pin-num">8</div>
+                                <div class="pin-num">9</div>
+                            </div>
+                            <div class="pin-numbers-right">
+                                <div class="pin-num">18</div>
+                                <div class="pin-num">17</div>
+                                <div class="pin-num">16</div>
+                                <div class="pin-num">15</div>
+                                <div class="pin-num">14</div>
+                                <div class="pin-num">13</div>
+                                <div class="pin-num">12</div>
+                                <div class="pin-num">11</div>
+                                <div class="pin-num">10</div>
+                            </div>
+                        </div>
+                        
+                        <div class="right-pins">
+                            <div class="pin-column">
+                                <div class="pin" data-pin="18">
+                                    <div class="pin-label power-positive">VDD</div>
+                                </div>
+                                <div class="pin" data-pin="17">
+                                    <div class="pin-label gpio">RB7</div>
+                                </div>
+                                <div class="pin" data-pin="16">
+                                    <div class="pin-label gpio">RB6</div>
+                                </div>
+                                <div class="pin" data-pin="15">
+                                    <div class="pin-label gpio">RB5</div>
+                                </div>
+                                <div class="pin" data-pin="14">
+                                    <div class="pin-label gpio">RB4</div>
+                                </div>
+                                <div class="pin" data-pin="13">
+                                    <div class="pin-label gpio">RB3</div>
+                                </div>
+                                <div class="pin" data-pin="12">
+                                    <div class="pin-label gpio">RB2</div>
+                                </div>
+                                <div class="pin" data-pin="11">
+                                    <div class="pin-label gpio">RB1</div>
+                                </div>
+                                <div class="pin" data-pin="10">
+                                    <div class="pin-label gpio">RB0/INT</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-panel">
+                    <div class="pin-details" id="pinDetails">
+                        <h3>Pin Information</h3>
+                        <p class="pin-placeholder">Click on a pin to view details</p>
+                    </div>
+
+                    <div class="chip-specs">
+                        <h3>Specifications</h3>
+                        <div class="spec-grid">
+                            <div class="spec-item">
+                                <span class="spec-label">Architecture:</span>
+                                <span class="spec-value">8-bit RISC</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">Flash Memory:</span>
+                                <span class="spec-value">1.75 KB</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">RAM:</span>
+                                <span class="spec-value">68 bytes</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">EEPROM:</span>
+                                <span class="spec-value">64 bytes</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">I/O Pins:</span>
+                                <span class="spec-value">13</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">Clock Speed:</span>
+                                <span class="spec-value">Up to 20 MHz</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">Package:</span>
+                                <span class="spec-value">18-pin DIP</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">Voltage:</span>
+                                <span class="spec-value">2.0V - 5.5V</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="downloads-panel">
+                    <div class="downloads-section">
+                        <h3>Downloads</h3>
+                        <div class="action-buttons">
+                            <button class="action-btn download-btn" title="Download Pinout as PDF">
+                                <span class="btn-icon">📄</span>
+                                <span class="btn-text">Pinout as PDF</span>
+                            </button>
+                            <button class="action-btn download-btn" title="Download Pinout as Image (PNG)">
+                                <span class="btn-icon">🖼️</span>
+                                <span class="btn-text">Pinout as Image (PNG)</span>
+                            </button>
+                            <button class="action-btn datasheet-btn" title="View Chip Datasheet">
+                                <span class="btn-icon">📋</span>
+                                <span class="btn-text">Chip Datasheet</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 MicroPinouts. Interactive microcontroller pinout reference.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="pic16f84a.js"></script>
+</body>
+</html>

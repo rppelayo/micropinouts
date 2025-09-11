@@ -1,0 +1,369 @@
+/* Pinout-specific styles */
+
+/* Chip diagram layout */
+.chip-diagram {
+    display: flex;
+    gap: 0;
+    align-items: center;
+    justify-content: center;
+    margin: 2rem 0;
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Systematic pinout generation approach */
+.pinout-container {
+    --pin-count: 18; /* Default for PIC16F84A, can be overridden */
+    --chip-height: 300px; /* Base chip height */
+    --pin-spacing: calc(var(--chip-height) / var(--pin-count)); /* Calculated spacing */
+}
+
+/* Pin columns - using calculated spacing with even distribution */
+.pin-column {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* Evenly distribute pins to match chip body */
+    height: var(--chip-height);
+    padding: 8px 0; /* Small space at top and bottom so pins aren't on the edge */
+}
+
+/* Individual pins - using calculated spacing */
+.pin {
+    height: var(--pin-spacing);
+    margin: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+/* Pin rectangles removed - using clean pin names only */
+
+.left-pins .pin {
+    margin-right: 2px; /* Very close to right edge */
+}
+
+.right-pins .pin {
+    margin-left: 2px; /* Move right pins even closer to chip body */
+}
+
+/* Pin labels */
+.pin-label {
+    background: #4a5568;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-align: center;
+    min-width: 60px;
+    transition: all 0.2s ease;
+}
+
+.left-pins .pin-label {
+    text-align: right;
+}
+
+.right-pins .pin-label {
+    text-align: left;
+}
+
+/* Pin type colors */
+.power-positive {
+    background: #e53e3e !important;
+}
+
+.power-negative {
+    background: #000000 !important;
+}
+
+.gpio {
+    background: #38a169 !important;
+}
+
+.clock {
+    background: #3182ce !important;
+}
+
+.reset {
+    background: #d69e2e !important;
+}
+
+.special {
+    background: #805ad5 !important;
+}
+
+.analog {
+    background: #dd6b20 !important;
+}
+
+/* Chip body - using calculated height */
+.chip-body {
+    width: 200px;
+    height: var(--chip-height);
+    background: #4a5568;
+    border-radius: 8px;
+    position: relative;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ESP32 specific chip body with image */
+.esp32-pinout .chip-body {
+    background: transparent; /* Remove gray background for image */
+    border-radius: 0; /* Remove border radius for image */
+}
+
+/* Pin indicator (red circle for pin 1) */
+.pin-indicator {
+    position: absolute;
+    top: 20px;
+    left: 40px;
+    width: 8px;
+    height: 8px;
+    background: #e53e3e;
+    border-radius: 50%;
+    z-index: 5;
+}
+
+/* Pin numbers inside chip body */
+.pin-numbers-left,
+.pin-numbers-right {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    z-index: 4;
+}
+
+.pin-numbers-left {
+    left: 2px; /* Very close to left edge */
+}
+
+.pin-numbers-right {
+    right: 2px; /* Very close to right edge */
+}
+
+
+/* Pin numbers positioning - systematic approach */
+.pin-numbers-left,
+.pin-numbers-right {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    z-index: 4;
+}
+
+.pin-numbers-left {
+    left: 2px; /* Very close to left edge */
+}
+
+.pin-numbers-right {
+    right: 2px; /* Very close to right edge */
+}
+
+.pin-num {
+    position: absolute;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+    line-height: 1;
+    transform: translateY(-50%);
+    /* Position will be set dynamically via JavaScript based on pin count */
+}
+
+/* Dynamic pin positioning - calculated via JavaScript */
+.pin-num[data-pin-position] {
+    top: calc(var(--pin-spacing) * var(--pin-position) + var(--pin-spacing) / 2);
+}
+
+/* Pin positioning - handled by the main .pin-column definition above */
+
+/* Thick rectangle pins removed - using individual pin rectangles instead */
+
+/* Hide external pin connectors */
+.pin-connector {
+    display: none;
+}
+
+/* Pin hover effects */
+.pin:hover .pin-label {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transform: scale(1.05);
+    animation: shake 1.5s ease-in-out infinite;
+}
+
+/* Pin selection */
+.pin.selected .pin-label {
+    box-shadow: 0 0 0 2px #ffffff;
+    filter: brightness(1.2);
+    color: #000000;
+}
+
+/* Shake animation */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-1px); }
+    75% { transform: translateX(1px); }
+}
+
+/* Function tags */
+.function-tag {
+    display: inline-block;
+    background: #e2e8f0;
+    color: #2d3748;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin: 0.125rem;
+}
+
+.function-tag.power {
+    background: #fed7d7;
+    color: #c53030;
+}
+
+.function-tag.clock {
+    background: #bee3f8;
+    color: #2b6cb0;
+}
+
+.function-tag.reset {
+    background: #faf089;
+    color: #744210;
+}
+
+.function-tag.analog {
+    background: #fbd38d;
+    color: #744210;
+}
+
+.function-tag.special {
+    background: #e9d8fd;
+    color: #553c9a;
+}
+
+/* ESP32 specific styles - using systematic approach */
+.esp32-pinout {
+    --pin-count: 38; /* 38 pins for ESP32 */
+    --chip-height: 600px; /* Total image height */
+    --pin-area-height: 400px; /* Actual pin area height (excluding microUSB) */
+    --pin-spacing: calc(var(--pin-area-height) / var(--pin-count));
+}
+
+.esp32-pinout .pin-column {
+    height: 600px; /* Match the chip height */
+}
+
+.esp32-pinout .chip-body {
+    height: 600px;
+    width: 300px;
+    background-image: url('resources/esp32_v1.png');
+    background-size: 300px 620px;
+    background-repeat: no-repeat;
+    background-position: center 3px;
+    border: none; /* Hide gray outline when image is present */
+    box-shadow: none; /* Remove any box shadow */
+}
+
+.esp32-pinout .pin-label {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+    min-width: 50px;
+}
+
+/* ESP32 systematic pin positioning - using direct percentage positioning */
+.esp32-pinout .pin-num {
+    font-size: 10px;
+    position: absolute;
+    transform: translateY(-50%);
+}
+
+/* ESP32 individual pin rectangles - aligned with pin numbers */
+.esp32-pinout .pin::before {
+    content: '';
+    position: absolute;
+    width: 20px; /* Wider to reach pin names horizontally */
+    height: 8px;
+    background: #6b7280;
+    z-index: 2;
+}
+
+.esp32-pinout .left-pins .pin::before {
+    right: -4px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.esp32-pinout .right-pins .pin::before {
+    left: -4px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* ESP32 gray pins - using individual pin rectangles only */
+.esp32-pinout .chip-body::before,
+.esp32-pinout .chip-body::after {
+    display: none; /* Hide both ::before and ::after pseudo-elements */
+}
+
+/* Responsive design for pinout */
+@media (max-width: 768px) {
+    .chip-diagram {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+    }
+    
+    .chip-body {
+        width: 150px;
+        min-height: 200px;
+        order: 2;
+    }
+    
+    .left-pins {
+        order: 1;
+    }
+    
+    .right-pins {
+        order: 3;
+    }
+    
+    .pin-column {
+        flex-direction: row;
+        min-height: auto;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .pin {
+        margin: 0.25rem;
+        min-height: auto;
+        flex: none;
+    }
+    
+    .pin-label {
+        font-size: 0.625rem;
+        padding: 0.125rem 0.25rem;
+        min-width: 50px;
+    }
+    
+    /* ESP32 mobile adjustments */
+    .esp32-pinout .pin-column {
+        min-height: auto;
+    }
+    
+    .esp32-pinout .chip-body {
+        min-height: 150px;
+    }
+}
