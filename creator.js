@@ -168,8 +168,8 @@ class PinoutCreator {
             this.updatePreview();
         });
         
-        document.getElementById('generatePinout').addEventListener('click', () => {
-            this.generatePinout();
+        document.getElementById('publishPinout').addEventListener('click', () => {
+            this.publishPinout();
         });
         
         document.getElementById('saveTemplate').addEventListener('click', () => {
@@ -505,8 +505,8 @@ class PinoutCreator {
         return numbersContainer;
     }
     
-    generatePinout() {
-        // Create a new page with the generated pinout
+    publishPinout() {
+        // Create and open a new page with the generated pinout
         const totalPinCount = this.symmetricPins ? this.currentPinCount : (this.leftPinCount + this.rightPinCount);
         
         const pinoutData = {
@@ -533,16 +533,15 @@ class PinoutCreator {
         // Generate HTML content
         const htmlContent = this.generatePinoutHTML(pinoutData);
         
-        // Create and download the file
+        // Open the generated page in a new tab
         const blob = new Blob([htmlContent], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${this.chipName.toLowerCase().replace(/\s+/g, '-')}-pinout.html`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        const newWindow = window.open(url, '_blank');
+        
+        // Clean up the URL after a short delay to allow the page to load
+        setTimeout(() => {
+            URL.revokeObjectURL(url);
+        }, 1000);
     }
     
     generatePinoutHTML(data) {
