@@ -695,7 +695,7 @@ class PinoutCreator {
             padding: 8px 0;
         }
 
-        .pin {
+        .custom-pinout .pin {
             height: var(--pin-spacing, 20px);
             margin: 0;
             position: relative;
@@ -760,16 +760,18 @@ class PinoutCreator {
             left: -4px;
         }
 
-        .chip-body {
+        .custom-pinout .chip-body {
+            height: var(--chip-height, 400px);
+            width: 200px;
             background: #ecf0f1;
             border: 2px solid #bdc3c7;
             border-radius: 8px;
             position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 200px;
-            height: var(--chip-height, 400px);
+        }
+
+        .custom-pinout .chip-body::before,
+        .custom-pinout .chip-body::after {
+            display: none;
         }
 
         .pin-numbers-left,
@@ -791,35 +793,28 @@ class PinoutCreator {
             right: 5px;
         }
 
-        .pin-num {
+        .custom-pinout .pin-num {
             position: absolute;
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: var(--pin-number-color, #2c3e50);
-            background: rgba(255, 255, 255, 0.9);
-            padding: 2px 4px;
-            border-radius: 3px;
-            text-align: center;
-            min-width: 16px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #2c3e50;
+            transform: translateY(-50%);
         }
 
-        .left-pins .pin::before {
+        .custom-pinout .pin::before {
             content: '';
             position: absolute;
             width: 20px;
             height: 8px;
             background: #7f8c8d;
             border-radius: 2px;
+        }
+
+        .left-pins .pin::before {
             right: -4px;
         }
 
         .right-pins .pin::before {
-            content: '';
-            position: absolute;
-            width: 20px;
-            height: 8px;
-            background: #7f8c8d;
-            border-radius: 2px;
             left: -4px;
         }
 
