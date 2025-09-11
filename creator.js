@@ -616,18 +616,42 @@ class PinoutCreator {
         }
 
         /* Main content */
-        .main-content {
+        .main {
             margin-top: 2rem;
         }
 
-        /* Pinout container */
-        .pinout-container {
+        /* Content grid layout */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Pinout section */
+        .pinout-section {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border-radius: 12px;
             padding: 2rem;
-            margin-bottom: 2rem;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .section-header h2 {
+            color: #2d3748;
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .section-subtitle {
+            color: #718096;
+            font-size: 1rem;
+            margin: 0;
         }
 
         .chip-diagram {
@@ -765,58 +789,121 @@ class PinoutCreator {
 
         /* Info panel */
         .info-panel {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 8px;
-            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 2rem;
             margin-bottom: 1rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         }
 
-        .info-panel h2 {
-            color: #2d3748;
-            margin-bottom: 1rem;
-            font-size: 1.5rem;
+        .pin-details {
+            margin-bottom: 2rem;
         }
 
-        .chip-info {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-        }
-
-        .info-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-
-        .info-item .label {
-            font-weight: 600;
-            color: #4a5568;
-            font-size: 0.9rem;
-        }
-
-        .info-item .value {
-            color: #2d3748;
-            font-size: 1rem;
-        }
-
-        /* Downloads panel */
-        .downloads-panel {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 8px;
-            padding: 1.5rem;
-        }
-
-        .downloads-panel h3 {
+        .pin-details h3 {
             color: #2d3748;
             margin-bottom: 1rem;
             font-size: 1.25rem;
         }
 
-        .download-buttons {
+        .pin-placeholder {
+            color: #718096;
+            font-style: italic;
+            margin: 0;
+        }
+
+        .chip-specs h3 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+
+        .spec-grid {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .spec-item {
             display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .spec-item:last-child {
+            border-bottom: none;
+        }
+
+        .spec-label {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 0.9rem;
+        }
+
+        .spec-value {
+            color: #2d3748;
+            font-size: 0.9rem;
+            text-align: right;
+        }
+
+        /* Downloads panel */
+        .downloads-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .downloads-section h3 {
+            color: #2d3748;
+            margin-bottom: 1.5rem;
+            font-size: 1.25rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
             gap: 1rem;
-            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: #2d3748;
+        }
+
+        .action-btn:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+
+        .download-btn:hover {
+            background: #f7fafc;
+        }
+
+        .datasheet-btn:hover {
+            background: #f0f9ff;
+        }
+
+        .btn-icon {
+            font-size: 1.2rem;
+        }
+
+        .btn-text {
+            font-weight: 600;
+            font-size: 0.9rem;
         }
 
         .btn {
@@ -931,6 +1018,11 @@ class PinoutCreator {
 
         /* Responsive design */
         @media (max-width: 768px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
             .chip-diagram {
                 flex-direction: column;
                 gap: 2rem;
@@ -940,12 +1032,20 @@ class PinoutCreator {
                 min-height: auto;
             }
 
-            .download-buttons {
+            .action-buttons {
                 flex-direction: column;
             }
 
             .nav {
                 gap: 1rem;
+            }
+
+            .section-header h2 {
+                font-size: 1.5rem;
+            }
+
+            .section-subtitle {
+                font-size: 0.9rem;
             }
         }
         `;
@@ -1083,27 +1183,31 @@ class PinoutCreator {
         }
         
         function updateInfoPanel(pin) {
-            const infoPanel = document.querySelector('.info-panel');
-            if (!infoPanel) return;
+            const pinDetails = document.getElementById('pinDetails');
+            if (!pinDetails) return;
             
             // Update pin information
-            const pinInfo = infoPanel.querySelector('.pin-info');
-            if (pinInfo) {
-                pinInfo.innerHTML = \`
-                    <div class="info-item">
-                        <span class="label">Pin Number:</span>
-                        <span class="value">\${pin.number}</span>
+            pinDetails.innerHTML = \`
+                <h3>Pin Information</h3>
+                <div class="spec-grid">
+                    <div class="spec-item">
+                        <span class="spec-label">Pin Number:</span>
+                        <span class="spec-value">\${pin.number}</span>
                     </div>
-                    <div class="info-item">
-                        <span class="label">Pin Name:</span>
-                        <span class="value">\${pin.name}</span>
+                    <div class="spec-item">
+                        <span class="spec-label">Pin Name:</span>
+                        <span class="spec-value">\${pin.name}</span>
                     </div>
-                    <div class="info-item">
-                        <span class="label">Type:</span>
-                        <span class="value">\${getPinTypeName(pin.type)}</span>
+                    <div class="spec-item">
+                        <span class="spec-label">Type:</span>
+                        <span class="spec-value">\${getPinTypeName(pin.type)}</span>
                     </div>
-                \`;
-            }
+                    <div class="spec-item">
+                        <span class="spec-label">Side:</span>
+                        <span class="spec-value">\${pin.side === 'left' ? 'Left' : 'Right'}</span>
+                    </div>
+                </div>
+            \`;
         }
         
         function getPinTypeName(type) {
@@ -1122,13 +1226,13 @@ class PinoutCreator {
         
         function setupDownloadButtons() {
             // PDF Download
-            const pdfButton = document.getElementById('pdfDownload');
+            const pdfButton = document.getElementById('downloadPdf');
             if (pdfButton) {
                 pdfButton.addEventListener('click', downloadAsPDF);
             }
             
             // Image Download
-            const imageButton = document.getElementById('imageDownload');
+            const imageButton = document.getElementById('downloadImage');
             if (imageButton) {
                 imageButton.addEventListener('click', downloadAsImage);
             }
@@ -1151,8 +1255,8 @@ class PinoutCreator {
             doc.text(pinoutData.chipName + ' Pinout Diagram', 20, 20);
             
             // Add pinout diagram as image
-            const pinoutContainer = document.querySelector('.pinout-container');
-            html2canvas(pinoutContainer).then(canvas => {
+            const pinoutSection = document.querySelector('.pinout-section');
+            html2canvas(pinoutSection).then(canvas => {
                 const imgData = canvas.toDataURL('image/png');
                 const imgWidth = 170;
                 const imgHeight = (canvas.height * imgWidth) / canvas.width;
@@ -1178,8 +1282,8 @@ class PinoutCreator {
         }
         
         function downloadAsImage() {
-            const pinoutContainer = document.querySelector('.pinout-container');
-            html2canvas(pinoutContainer).then(canvas => {
+            const pinoutSection = document.querySelector('.pinout-section');
+            html2canvas(pinoutSection).then(canvas => {
                 const link = document.createElement('a');
                 link.download = \`\${pinoutData.chipName.toLowerCase().replace(/\\s+/g, '-')}-pinout.png\`;
                 link.href = canvas.toDataURL();
@@ -1208,47 +1312,78 @@ class PinoutCreator {
 <body>
     <header class="header">
         <div class="container">
-            <h1><a href="index.html">MicroPinouts</a></h1>
-            <nav>
-                <a href="index.html">Home</a>
-                <a href="pinout-creator.html">Pinout Creator</a>
-            </nav>
+            <div class="header-content">
+                <h1 class="logo">
+                    <a href="index.html">MicroPinouts</a>
+                </h1>
+                <nav class="nav">
+                    <a href="index.html" class="nav-link">Home</a>
+                    <a href="pinout-creator.html" class="nav-link">Pinout Creator</a>
+                </nav>
+            </div>
         </div>
     </header>
 
-    <main class="main-content">
+    <main class="main">
         <div class="container">
-            <div class="pinout-container">
-                <div class="chip-diagram custom-pinout" id="chipDiagram">
-                    <!-- Pinout will be generated by JavaScript -->
+            <div class="content-grid">
+                <div class="pinout-section">
+                    <div class="section-header">
+                        <h2>${data.chipName}</h2>
+                        <p class="section-subtitle">${data.symmetricPins ? `${data.pinCount} pins (symmetric)` : `${data.leftPinCount}L + ${data.rightPinCount}R pins`} - ${data.boardWidth}mm × ${data.boardHeight}mm</p>
+                    </div>
+                    
+                    <div class="chip-diagram custom-pinout" id="chipDiagram">
+                        <!-- Pinout will be generated by JavaScript -->
+                    </div>
                 </div>
-                
+
                 <div class="info-panel">
-                    <h2>${data.chipName}</h2>
-                    <div class="chip-info">
-                        <div class="info-item">
-                            <span class="label">Dimensions:</span>
-                            <span class="value">${data.boardWidth}mm × ${data.boardHeight}mm</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="label">Pin Configuration:</span>
-                            <span class="value">${data.symmetricPins ? `${data.pinCount} pins (symmetric)` : `${data.leftPinCount}L + ${data.rightPinCount}R`}</span>
+                    <div class="pin-details" id="pinDetails">
+                        <h3>Pin Information</h3>
+                        <p class="pin-placeholder">Click on a pin to view details</p>
+                    </div>
+
+                    <div class="chip-specs">
+                        <h3>Specifications</h3>
+                        <div class="spec-grid">
+                            <div class="spec-item">
+                                <span class="spec-label">Dimensions:</span>
+                                <span class="spec-value">${data.boardWidth}mm × ${data.boardHeight}mm</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">Pin Configuration:</span>
+                                <span class="spec-value">${data.symmetricPins ? `${data.pinCount} pins (symmetric)` : `${data.leftPinCount}L + ${data.rightPinCount}R`}</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">Background:</span>
+                                <span class="spec-value">${data.backgroundType === 'image' ? 'Custom Image' : 'Default'}</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">Pin Count:</span>
+                                <span class="spec-value">${data.pinCount} total</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="downloads-panel">
-                    <h3>Downloads</h3>
-                    <div class="download-buttons">
-                        <button id="downloadPdf" class="btn btn-primary">
-                            <i class="fas fa-file-pdf"></i> Pinout as PDF
-                        </button>
-                        <button id="downloadImage" class="btn btn-primary">
-                            <i class="fas fa-image"></i> Pinout as Image (PNG)
-                        </button>
-                        <button id="datasheetLink" class="btn btn-secondary">
-                            <i class="fas fa-external-link-alt"></i> Chip Datasheet
-                        </button>
+                    <div class="downloads-section">
+                        <h3>Downloads</h3>
+                        <div class="action-buttons">
+                            <button id="downloadPdf" class="action-btn download-btn" title="Download Pinout as PDF">
+                                <span class="btn-icon">📄</span>
+                                <span class="btn-text">Pinout as PDF</span>
+                            </button>
+                            <button id="downloadImage" class="action-btn download-btn" title="Download Pinout as Image (PNG)">
+                                <span class="btn-icon">🖼️</span>
+                                <span class="btn-text">Pinout as Image (PNG)</span>
+                            </button>
+                            <button id="datasheetLink" class="action-btn datasheet-btn" title="View Chip Datasheet">
+                                <span class="btn-icon">📋</span>
+                                <span class="btn-text">Chip Datasheet</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1263,6 +1398,12 @@ class PinoutCreator {
             </div>
         </div>
     </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 MicroPinouts. Interactive microcontroller pinout reference.</p>
+        </div>
+    </footer>
 
     <script>
         // Generated pinout data
