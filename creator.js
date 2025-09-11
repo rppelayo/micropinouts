@@ -1502,24 +1502,37 @@ class PinoutCreator {
             
             console.log('Setting up SVG event listeners');
             
-            // Listen for pin selection events from SVG
-            svg.addEventListener('pinSelected', function(event) {
-                console.log('Pin selected event received:', event.detail);
-                const { pinIndex, pinName, pinElement, pinData } = event.detail;
-                if (pinData) {
-                    console.log('Using pinData:', pinData);
-                    updateInfoPanel(pinData);
-                } else {
-                    // Fallback: try to find pin data by name
-                    console.log('Looking for pin by name:', pinName);
-                    const pin = pinoutData.pins.find(p => p.name === pinName);
-                    if (pin) {
-                        console.log('Found pin:', pin);
-                        updateInfoPanel(pin);
-                    } else {
-                        console.error('Pin not found:', pinName);
+            // Add click listeners directly to SVG elements
+            const pinLabels = svg.querySelectorAll('.pin-label-bg, .pin-label-text, .pin-num-text');
+            pinLabels.forEach((element, index) => {
+                element.addEventListener('click', function(e) {
+                    console.log('SVG element clicked:', element);
+                    
+                    // Remove previous selection
+                    svg.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+                    
+                    // Add selection to clicked elements
+                    element.classList.add('selected');
+                    
+                    // Find all elements with the same data-pin-index
+                    const pinIndex = element.getAttribute('data-pin-index');
+                    if (pinIndex !== null) {
+                        svg.querySelectorAll(\`[data-pin-index="\${pinIndex}"]\`).forEach(el => {
+                            el.classList.add('selected');
+                        });
+                        
+                        // Find the pin data
+                        const pinName = element.textContent || element.querySelector('text')?.textContent;
+                        console.log('Looking for pin:', pinName);
+                        const pin = pinoutData.pins.find(p => p.name === pinName);
+                        if (pin) {
+                            console.log('Found pin data:', pin);
+                            updateInfoPanel(pin);
+                        } else {
+                            console.error('Pin not found:', pinName);
+                        }
                     }
-                }
+                });
             });
         }
         
@@ -1706,55 +1719,7 @@ class PinoutCreator {
                 svg.appendChild(pinNumText);
             }
 
-            // Add click event listeners
-            const clickHandler = (e) => {
-                console.log('SVG pin clicked:', labelText);
-                
-                // Remove previous selection
-                svg.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
-                
-                // Add selection to clicked elements
-                labelBg.classList.add('selected');
-                text.classList.add('selected');
-                
-                // Find the corresponding pin data
-                const pinData = pinoutData.pins.find(p => p.name === labelText);
-                console.log('Found pinData for', labelText, ':', pinData);
-                
-                // Trigger pin selection event
-                const event = new CustomEvent('pinSelected', {
-                    detail: {
-                        pinIndex: index,
-                        pinName: labelText,
-                        pinElement: pin,
-                        pinData: pinData
-                    }
-                });
-                console.log('Dispatching pinSelected event:', event.detail);
-                svg.dispatchEvent(event);
-            };
-
-            labelBg.addEventListener('click', clickHandler);
-            text.addEventListener('click', clickHandler);
-            
-            // Add click event listener to pin number if it exists
-            if (pinNumber && pinNum) {
-                const pinNumText = svg.querySelector(`.pin-num-text[data-pin-index="${index}"]`);
-                if (pinNumText) {
-                    pinNumText.addEventListener('click', clickHandler);
-                }
-            }
-
-            // Add hover effects
-            labelBg.addEventListener('mouseenter', () => {
-                labelBg.setAttribute('opacity', '0.8');
-                labelBg.setAttribute('transform', 'scale(1.05)');
-            });
-
-            labelBg.addEventListener('mouseleave', () => {
-                labelBg.setAttribute('opacity', '1');
-                labelBg.setAttribute('transform', 'scale(1)');
-            });
+            // Note: Event listeners will be added after SVG is embedded in the page
         });
 
         // Add CSS styles for SVG
