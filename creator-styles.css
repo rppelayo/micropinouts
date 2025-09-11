@@ -92,6 +92,14 @@
     box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
 
+.form-help {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.8rem;
+    color: #6c757d;
+    font-style: italic;
+}
+
 /* Pin List */
 .pin-list {
     max-height: 400px;

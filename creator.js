@@ -5,7 +5,7 @@ class PinoutCreator {
         this.pins = [];
         this.currentPinCount = 16;
         this.chipName = 'Custom Chip';
-        this.packageType = 'DIP';
+        this.boardHeight = 20; // in mm
         this.backgroundType = 'default';
         this.backgroundImage = null;
         
@@ -38,14 +38,12 @@ class PinoutCreator {
         
         document.getElementById('pinCount').addEventListener('change', (e) => {
             this.currentPinCount = parseInt(e.target.value);
-            this.validatePinCountForPackage();
             this.generateInitialPins();
             this.updatePreview();
         });
         
-        document.getElementById('packageType').addEventListener('change', (e) => {
-            this.packageType = e.target.value;
-            this.validatePinCountForPackage();
+        document.getElementById('boardHeight').addEventListener('input', (e) => {
+            this.boardHeight = parseFloat(e.target.value) || 20;
             this.updatePreview();
         });
         
@@ -104,39 +102,6 @@ class PinoutCreator {
         }
     }
     
-    validatePinCountForPackage() {
-        const pinCountSelect = document.getElementById('pinCount');
-        const currentPinCount = parseInt(pinCountSelect.value);
-        
-        // Package-specific pin count limits
-        const packageLimits = {
-            'DIP': 64,      // DIP packages max out around 64 pins
-            'SOIC': 28,     // SOIC packages typically max out around 28 pins
-            'QFP': 100,     // QFP packages can go up to 100+ pins
-            'BGA': 1000,    // BGA packages can have very high pin counts
-            'custom': 1000  // Custom packages have no practical limit
-        };
-        
-        const maxPins = packageLimits[this.packageType] || 1000;
-        
-        if (currentPinCount > maxPins) {
-            // Find the highest valid pin count for this package
-            const validPinCounts = Array.from(pinCountSelect.options)
-                .map(option => parseInt(option.value))
-                .filter(count => count <= maxPins)
-                .sort((a, b) => b - a);
-            
-            if (validPinCounts.length > 0) {
-                const newPinCount = validPinCounts[0];
-                pinCountSelect.value = newPinCount;
-                this.currentPinCount = newPinCount;
-                this.generateInitialPins();
-                
-                // Show a warning
-                alert(`Warning: ${this.packageType} packages typically don't support ${currentPinCount} pins. Adjusted to ${newPinCount} pins.`);
-            }
-        }
-    }
     
     generateInitialPins() {
         this.pins = [];
@@ -318,6 +283,12 @@ class PinoutCreator {
         const chipBody = document.createElement('div');
         chipBody.className = 'chip-body';
         
+        // Calculate width based on board height (maintain aspect ratio)
+        // Typical board aspect ratio is around 1:2 to 1:3 (height:width)
+        const aspectRatio = 2.5; // height:width ratio
+        const width = this.boardHeight * aspectRatio;
+        chipBody.style.width = `${width}px`;
+        
         // Apply background based on type
         if (this.backgroundType === 'image' && this.backgroundImage) {
             chipBody.style.backgroundImage = `url(${this.backgroundImage})`;
@@ -356,7 +327,7 @@ class PinoutCreator {
         const pinoutData = {
             chipName: this.chipName,
             pinCount: this.currentPinCount,
-            packageType: this.packageType,
+            boardHeight: this.boardHeight,
             backgroundType: this.backgroundType,
             backgroundImage: this.backgroundImage,
             pins: this.pins
@@ -412,8 +383,8 @@ class PinoutCreator {
                     <h2>${data.chipName}</h2>
                     <div class="chip-info">
                         <div class="info-item">
-                            <span class="label">Type:</span>
-                            <span class="value">${data.packageType}</span>
+                            <span class="label">Board Height:</span>
+                            <span class="value">${data.boardHeight}mm</span>
                         </div>
                         <div class="info-item">
                             <span class="label">Pin Count:</span>

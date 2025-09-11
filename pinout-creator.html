@@ -64,14 +64,9 @@
                         </div>
                         
                         <div class="form-group">
-                            <label for="packageType">Package Type:</label>
-                            <select id="packageType">
-                                <option value="DIP">DIP (Dual Inline Package)</option>
-                                <option value="SOIC">SOIC (Small Outline IC)</option>
-                                <option value="QFP">QFP (Quad Flat Package)</option>
-                                <option value="BGA">BGA (Ball Grid Array)</option>
-                                <option value="custom">Custom</option>
-                            </select>
+                            <label for="boardHeight">Board/Chip Height (mm):</label>
+                            <input type="number" id="boardHeight" min="5" max="100" value="20" placeholder="e.g., 20">
+                            <small class="form-help">Physical height of the board or chip in millimeters</small>
                         </div>
                     </div>
 
