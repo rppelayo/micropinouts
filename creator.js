@@ -196,8 +196,9 @@ class PinoutCreator {
                 });
             }
             
-            // Generate right pins (leftPinCount + 1 to leftPinCount + rightPinCount)
-            for (let i = this.leftPinCount + 1; i <= this.leftPinCount + this.rightPinCount; i++) {
+            // Generate right pins - descending order (highest number at top)
+            const rightStartNumber = this.leftPinCount + this.rightPinCount;
+            for (let i = rightStartNumber; i > this.leftPinCount; i--) {
                 this.pins.push({
                     number: i,
                     name: `Pin${i}`,
