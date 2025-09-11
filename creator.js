@@ -1623,14 +1623,33 @@ class PinoutCreator {
             // Add chip body background image if present
             const bgImage = window.getComputedStyle(chipBody).backgroundImage;
             if (bgImage && bgImage !== 'none') {
+                // Hide the chip body outline when background image is present
+                chipRectElement.setAttribute('fill', 'transparent');
+                chipRectElement.setAttribute('stroke', 'transparent');
+                
                 const imageUrl = bgImage.slice(5, -2); // Remove 'url("' and '")'
                 const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
                 image.setAttribute('href', imageUrl);
-                image.setAttribute('x', chipRect.left - containerRect.left);
-                image.setAttribute('y', chipRect.top - containerRect.top);
-                image.setAttribute('width', chipRect.width);
-                image.setAttribute('height', chipRect.height);
-                image.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+                
+                // Apply custom positioning and scaling
+                const chipCenterX = chipRect.left - containerRect.left + chipRect.width / 2;
+                const chipCenterY = chipRect.top - containerRect.top + chipRect.height / 2;
+                
+                // Use the pinout data for custom positioning and scaling
+                const imageScaleX = this.imageScaleX || 300;
+                const imageScaleY = this.imageScaleY || 300;
+                const imageOffsetX = this.imageOffsetX || 0;
+                const imageOffsetY = this.imageOffsetY || 0;
+                
+                // Calculate position with custom offset
+                const imageX = chipCenterX - imageScaleX / 2 + imageOffsetX;
+                const imageY = chipCenterY - imageScaleY / 2 + imageOffsetY;
+                
+                image.setAttribute('x', imageX);
+                image.setAttribute('y', imageY);
+                image.setAttribute('width', imageScaleX);
+                image.setAttribute('height', imageScaleY);
+                image.setAttribute('preserveAspectRatio', 'none'); // Allow custom scaling
                 svg.appendChild(image);
             }
         }
