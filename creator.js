@@ -13,6 +13,7 @@ class PinoutCreator {
         this.widthManuallySet = false; // Track if width was manually set
         this.backgroundType = 'default';
         this.backgroundImage = null;
+        this.pinNumberColor = '#2c3e50';
         
         this.pinTypes = {
             'power': { name: 'Power', color: '#e74c3c', class: 'pin-type-power' },
@@ -84,6 +85,11 @@ class PinoutCreator {
         document.getElementById('boardWidth').addEventListener('input', (e) => {
             this.boardWidth = parseFloat(e.target.value) || 50;
             this.widthManuallySet = true; // Mark width as manually set
+            this.updatePreview();
+        });
+        
+        document.getElementById('pinNumberColor').addEventListener('input', (e) => {
+            this.pinNumberColor = e.target.value;
             this.updatePreview();
         });
         
@@ -402,6 +408,7 @@ class PinoutCreator {
             const pinNum = document.createElement('div');
             pinNum.className = 'pin-num';
             pinNum.textContent = pin.number;
+            pinNum.style.color = this.pinNumberColor;
             
             // Calculate position based on the pin's position in the array
             const position = index + 1; // 1-based index
@@ -428,6 +435,7 @@ class PinoutCreator {
             boardWidth: this.boardWidth,
             backgroundType: this.backgroundType,
             backgroundImage: this.backgroundImage,
+            pinNumberColor: this.pinNumberColor,
             pins: this.pins
         };
         
@@ -525,8 +533,99 @@ class PinoutCreator {
             container.style.setProperty('--chip-height', '500px');
             container.style.setProperty('--pin-spacing', \`\${500 / pinoutData.pinCount}px\`);
             
-            // Generate pinout structure (similar to creator logic)
-            // ... (implementation details)
+            // Clear container
+            container.innerHTML = '';
+            
+            // Separate left and right pins
+            const leftPins = pinoutData.pins.filter(pin => pin.side === 'left');
+            const rightPins = pinoutData.pins.filter(pin => pin.side === 'right');
+            
+            // Create left pins column
+            const leftColumn = document.createElement('div');
+            leftColumn.className = 'pin-column left-pins';
+            leftPins.forEach(pin => {
+                const pinElement = createPinElement(pin);
+                leftColumn.appendChild(pinElement);
+            });
+            
+            // Create chip body
+            const chipBody = createChipBody();
+            
+            // Create right pins column
+            const rightColumn = document.createElement('div');
+            rightColumn.className = 'pin-column right-pins';
+            rightPins.forEach(pin => {
+                const pinElement = createPinElement(pin);
+                rightColumn.appendChild(pinElement);
+            });
+            
+            // Create pin numbers
+            const leftNumbers = createPinNumbers(leftPins, 'left');
+            const rightNumbers = createPinNumbers(rightPins, 'right');
+            
+            chipBody.appendChild(leftNumbers);
+            chipBody.appendChild(rightNumbers);
+            
+            // Assemble the diagram
+            container.appendChild(leftColumn);
+            container.appendChild(chipBody);
+            container.appendChild(rightColumn);
+        }
+        
+        function createPinElement(pin) {
+            const pinDiv = document.createElement('div');
+            pinDiv.className = 'pin';
+            pinDiv.dataset.pinNumber = pin.number;
+            
+            const label = document.createElement('div');
+            label.className = \`pin-label pin-type-\${pin.type}\`;
+            label.textContent = pin.name;
+            
+            pinDiv.appendChild(label);
+            return pinDiv;
+        }
+        
+        function createChipBody() {
+            const chipBody = document.createElement('div');
+            chipBody.className = 'chip-body';
+            
+            // Set width based on board width
+            const mmToPx = 3.78;
+            const width = pinoutData.boardWidth * mmToPx;
+            chipBody.style.width = \`\${width}px\`;
+            
+            // Apply background
+            if (pinoutData.backgroundType === 'image' && pinoutData.backgroundImage) {
+                chipBody.style.backgroundImage = \`url(\${pinoutData.backgroundImage})\`;
+                chipBody.style.backgroundSize = 'contain';
+                chipBody.style.backgroundRepeat = 'no-repeat';
+                chipBody.style.backgroundPosition = 'center';
+                chipBody.style.border = 'none';
+            }
+            
+            return chipBody;
+        }
+        
+        function createPinNumbers(pins, side) {
+            const numbersContainer = document.createElement('div');
+            numbersContainer.className = \`pin-numbers-\${side}\`;
+            
+            const sidePinCount = pins.length;
+            
+            pins.forEach((pin, index) => {
+                const pinNum = document.createElement('div');
+                pinNum.className = 'pin-num';
+                pinNum.textContent = pin.number;
+                pinNum.style.color = pinoutData.pinNumberColor || '#2c3e50';
+                
+                const position = index + 1;
+                const percentage = ((position * 2 - 1) / (sidePinCount * 2)) * 100;
+                pinNum.style.top = \`\${percentage}%\`;
+                
+                numbersContainer.appendChild(pinNum);
+            });
+            
+            return numbersContainer;
         }
         
         function setupDownloadButtons() {
