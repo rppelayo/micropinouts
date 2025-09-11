@@ -669,7 +669,7 @@ class PinoutCreator {
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 1rem;
+            gap: 0;
             margin-bottom: 2rem;
             min-height: 400px;
         }
@@ -677,8 +677,9 @@ class PinoutCreator {
         .pin-column {
             display: flex;
             flex-direction: column;
-            justify-content: space-around;
-            min-height: 400px;
+            justify-content: space-between;
+            height: var(--chip-height, 400px);
+            padding: 8px 0;
         }
 
         .pin {
@@ -723,6 +724,34 @@ class PinoutCreator {
 
         .right-pins .pin-label {
             text-align: left;
+        }
+
+        .left-pins .pin {
+            margin-right: 2px;
+        }
+
+        .right-pins .pin {
+            margin-left: 2px;
+        }
+
+        .left-pins .pin::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 8px;
+            background: #7f8c8d;
+            border-radius: 2px;
+            right: -4px;
+        }
+
+        .right-pins .pin::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 8px;
+            background: #7f8c8d;
+            border-radius: 2px;
+            left: -4px;
         }
 
         .chip-body {
