@@ -1618,7 +1618,18 @@ class PinoutCreator {
 
             // Create pin rectangle (gray connector)
             const pinRectElement = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            pinRectElement.setAttribute('x', pinRect.left - containerRect.left);
+            
+            // Determine if this is a left or right pin based on container class
+            const isLeftPin = pin.closest('.left-pins') !== null;
+            
+            if (isLeftPin) {
+                // For left pins, position gray rectangle to the right of the pin label (closer to chip body)
+                pinRectElement.setAttribute('x', labelRect.right - containerRect.left);
+            } else {
+                // For right pins, position gray rectangle to the left of the pin label (closer to chip body)
+                pinRectElement.setAttribute('x', labelRect.left - containerRect.left - 20);
+            }
+            
             pinRectElement.setAttribute('y', pinRect.top - containerRect.top + pinRect.height / 2 - 2);
             pinRectElement.setAttribute('width', 20);
             pinRectElement.setAttribute('height', 4);
