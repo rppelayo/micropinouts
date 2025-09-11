@@ -131,6 +131,21 @@
     box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
 
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+    cursor: pointer;
+}
+
 /* Pin List */
 .pin-list {
     max-height: 400px;
@@ -450,4 +465,87 @@
 .empty-state p {
     margin: 0;
     font-size: 0.9rem;
+}
+
+/* Content Editor Panel */
+.content-editor-panel {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-top: 2rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.content-editor-panel h2 {
+    color: #2d3748;
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+    border-bottom: 2px solid #667eea;
+    padding-bottom: 0.5rem;
+}
+
+.content-editor-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.content-editor-container .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.content-editor-container label {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 0.9rem;
+}
+
+.content-editor-container input,
+.content-editor-container textarea {
+    padding: 0.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: border-color 0.3s ease;
+    background: white;
+}
+
+.content-editor-container input:focus,
+.content-editor-container textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.content-editor-container .form-help {
+    color: #718096;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+/* Quill Editor Styling */
+.ql-toolbar {
+    border: 2px solid #e2e8f0 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    border-radius: 6px 6px 0 0 !important;
+}
+
+.ql-container {
+    border: 2px solid #e2e8f0 !important;
+    border-top: none !important;
+    border-radius: 0 0 6px 6px !important;
+    font-size: 0.9rem;
+}
+
+.ql-editor {
+    min-height: 250px;
+    padding: 1rem;
+}
+
+.ql-editor.ql-blank::before {
+    color: #a0aec0;
+    font-style: italic;
 }
