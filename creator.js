@@ -118,8 +118,8 @@ class PinoutCreator {
             });
         }
         
-        // Generate right pins (leftPinCount + 1 to pinCount)
-        for (let i = leftPinCount + 1; i <= pinCount; i++) {
+        // Generate right pins (pinCount down to leftPinCount + 1) - reverse order
+        for (let i = pinCount; i > leftPinCount; i--) {
             this.pins.push({
                 number: i,
                 name: `Pin${i}`,
@@ -288,13 +288,15 @@ class PinoutCreator {
         const numbersContainer = document.createElement('div');
         numbersContainer.className = `pin-numbers-${side}`;
         
-        pins.forEach(pin => {
+        pins.forEach((pin, index) => {
             const pinNum = document.createElement('div');
             pinNum.className = 'pin-num';
             pinNum.textContent = pin.number;
             
-            // Calculate position based on pin number
-            const percentage = ((pin.number * 2 - 1) / this.currentPinCount) * 100;
+            // Calculate position based on the pin's position in the array
+            // Both left and right pins are now in the correct order
+            const position = index + 1; // 1-based index
+            const percentage = ((position * 2 - 1) / this.currentPinCount) * 100;
             pinNum.style.top = `${percentage}%`;
             
             numbersContainer.appendChild(pinNum);
