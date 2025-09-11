@@ -544,6 +544,413 @@ class PinoutCreator {
         }, 1000);
     }
     
+    getEmbeddedCSS() {
+        // This will be populated with the actual CSS content
+        // For now, return a placeholder that will be replaced
+        return `
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #2d3748;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 20px;
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2d3748;
+            text-decoration: none;
+        }
+
+        .logo a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .nav {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-link {
+            color: #4a5568;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: #667eea;
+        }
+
+        /* Main content */
+        .main-content {
+            margin-top: 2rem;
+        }
+
+        /* Pinout container */
+        .pinout-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .chip-diagram {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            min-height: 400px;
+        }
+
+        .pin-column {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            min-height: 400px;
+        }
+
+        .pin {
+            height: var(--pin-spacing, 20px);
+            margin: 0;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .pin-label {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: white;
+            text-align: center;
+            min-width: 80px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+
+        .pin-label:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .pin-label.selected {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-2px); }
+            75% { transform: translateX(2px); }
+        }
+
+        .left-pins .pin-label {
+            text-align: right;
+        }
+
+        .right-pins .pin-label {
+            text-align: left;
+        }
+
+        .chip-body {
+            background: #ecf0f1;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 200px;
+            height: var(--chip-height, 400px);
+        }
+
+        .pin-numbers-left,
+        .pin-numbers-right {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+
+        .pin-numbers-left {
+            left: 5px;
+        }
+
+        .pin-numbers-right {
+            right: 5px;
+        }
+
+        .pin-num {
+            position: absolute;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--pin-number-color, #2c3e50);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2px 4px;
+            border-radius: 3px;
+            text-align: center;
+            min-width: 16px;
+        }
+
+        .left-pins .pin::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 8px;
+            background: #7f8c8d;
+            border-radius: 2px;
+            right: -4px;
+        }
+
+        .right-pins .pin::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 8px;
+            background: #7f8c8d;
+            border-radius: 2px;
+            left: -4px;
+        }
+
+        /* Pin type colors */
+        .pin-type-power { background: #e74c3c; }
+        .pin-type-gnd { background: #2c3e50; }
+        .pin-type-gpio { background: #27ae60; }
+        .pin-type-data { background: #3498db; }
+        .pin-type-clock { background: #9b59b6; }
+        .pin-type-analog { background: #f39c12; }
+        .pin-type-special { background: #e67e22; }
+        .pin-type-other { background: #95a5a6; }
+
+        /* Info panel */
+        .info-panel {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .info-panel h2 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .chip-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .info-item .label {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 0.9rem;
+        }
+
+        .info-item .value {
+            color: #2d3748;
+            font-size: 1rem;
+        }
+
+        /* Downloads panel */
+        .downloads-panel {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .downloads-panel h3 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+
+        .download-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #718096;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4a5568;
+            transform: translateY(-2px);
+        }
+
+        /* Content section */
+        .content-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            margin: 2rem 0;
+            padding: 2rem 0;
+        }
+
+        .content-wrapper {
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.8;
+        }
+
+        .content-wrapper h1,
+        .content-wrapper h2,
+        .content-wrapper h3 {
+            color: #2d3748;
+            margin: 1.5rem 0 1rem 0;
+        }
+
+        .content-wrapper h1 {
+            font-size: 2rem;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 0.5rem;
+        }
+
+        .content-wrapper h2 {
+            font-size: 1.5rem;
+            color: #4a5568;
+        }
+
+        .content-wrapper h3 {
+            font-size: 1.25rem;
+            color: #718096;
+        }
+
+        .content-wrapper p {
+            margin-bottom: 1rem;
+            color: #4a5568;
+        }
+
+        .content-wrapper ul,
+        .content-wrapper ol {
+            margin: 1rem 0;
+            padding-left: 2rem;
+        }
+
+        .content-wrapper li {
+            margin-bottom: 0.5rem;
+            color: #4a5568;
+        }
+
+        .content-wrapper a {
+            color: #667eea;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-bottom-color 0.3s ease;
+        }
+
+        .content-wrapper a:hover {
+            border-bottom-color: #667eea;
+        }
+
+        /* Footer */
+        .footer {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            margin-top: 3rem;
+            padding: 2rem 0;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .chip-diagram {
+                flex-direction: column;
+                gap: 2rem;
+            }
+
+            .pin-column {
+                min-height: auto;
+            }
+
+            .download-buttons {
+                flex-direction: column;
+            }
+
+            .nav {
+                gap: 1rem;
+            }
+        }
+        `;
+    }
+
     generatePinoutHTML(data) {
         return `<!DOCTYPE html>
 <html lang="en">
@@ -552,11 +959,13 @@ class PinoutCreator {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${data.pageTitle || data.chipName + ' Pinout - MicroPinouts'}</title>
     <meta name="description" content="${data.metaDescription || 'Complete pinout diagram for ' + data.chipName + ' microcontroller with detailed pin information and specifications.'}">
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="pinout-styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        /* Embedded CSS for standalone page */
+        ${this.getEmbeddedCSS()}
+    </style>
 </head>
 <body>
     <header class="header">
