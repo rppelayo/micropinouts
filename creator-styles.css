@@ -317,11 +317,10 @@
 }
 
 .custom-pinout .pin-column {
-    display: grid;
-    grid-auto-rows: var(--pin-spacing, 20px); /* one row per pin */
-    row-gap: 0;                                /* no redistribution */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
     height: var(--chip-height);
-    align-content: start;                       /* start; not space-between */
     padding: 8px 0; /* Small space at top and bottom so pins aren't on the edge */
     min-height: 400px; /* Minimum height for very small pin counts */
 }
@@ -341,12 +340,12 @@
 }
 
 .custom-pinout .pin {
-    height: var(--pin-spacing);
     margin: 0;
     position: relative;
     display: flex;
     align-items: center;
     overflow: visible;
+    flex: 1;
 }
 
 .custom-pinout .pin::before {

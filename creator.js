@@ -703,21 +703,20 @@ class PinoutCreator {
         }
 
         .pin-column {
-            display: grid;
-            grid-auto-rows: var(--pin-spacing, 20px); /* one row per pin */
-            row-gap: 0;                                /* no redistribution */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
             height: var(--chip-height, 400px);
-            align-content: start;                       /* start; not space-between */
             padding: 8px 0;
         }
 
         .custom-pinout .pin {
-            height: var(--pin-spacing, 20px);
             margin: 0;
             position: relative;
             display: flex;
             align-items: center;
             overflow: visible;
+            flex: 1;
         }
 
         .pin-label {
