@@ -1219,8 +1219,12 @@ class PinoutCreator {
         }
         
         function updateInfoPanel(pin) {
+            console.log('updateInfoPanel called with:', pin);
             const pinDetails = document.getElementById('pinDetails');
-            if (!pinDetails) return;
+            if (!pinDetails) {
+                console.error('pinDetails element not found');
+                return;
+            }
             
             // Update pin information
             pinDetails.innerHTML = \`
@@ -1491,18 +1495,29 @@ class PinoutCreator {
         function setupSVGEventListeners() {
             // Set up event listeners for SVG elements
             const svg = document.querySelector('#chipDiagram svg');
-            if (!svg) return;
+            if (!svg) {
+                console.error('No SVG found in chipDiagram');
+                return;
+            }
+            
+            console.log('Setting up SVG event listeners');
             
             // Listen for pin selection events from SVG
             svg.addEventListener('pinSelected', function(event) {
+                console.log('Pin selected event received:', event.detail);
                 const { pinIndex, pinName, pinElement, pinData } = event.detail;
                 if (pinData) {
+                    console.log('Using pinData:', pinData);
                     updateInfoPanel(pinData);
                 } else {
                     // Fallback: try to find pin data by name
+                    console.log('Looking for pin by name:', pinName);
                     const pin = pinoutData.pins.find(p => p.name === pinName);
                     if (pin) {
+                        console.log('Found pin:', pin);
                         updateInfoPanel(pin);
+                    } else {
+                        console.error('Pin not found:', pinName);
                     }
                 }
             });
@@ -1693,6 +1708,8 @@ class PinoutCreator {
 
             // Add click event listeners
             const clickHandler = (e) => {
+                console.log('SVG pin clicked:', labelText);
+                
                 // Remove previous selection
                 svg.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
                 
@@ -1702,6 +1719,7 @@ class PinoutCreator {
                 
                 // Find the corresponding pin data
                 const pinData = pinoutData.pins.find(p => p.name === labelText);
+                console.log('Found pinData for', labelText, ':', pinData);
                 
                 // Trigger pin selection event
                 const event = new CustomEvent('pinSelected', {
@@ -1712,6 +1730,7 @@ class PinoutCreator {
                         pinData: pinData
                     }
                 });
+                console.log('Dispatching pinSelected event:', event.detail);
                 svg.dispatchEvent(event);
             };
 
