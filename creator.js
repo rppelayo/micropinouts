@@ -6,6 +6,8 @@ class PinoutCreator {
         this.currentPinCount = 16;
         this.chipName = 'Custom Chip';
         this.boardHeight = 20; // in mm
+        this.boardWidth = 50; // in mm
+        this.widthManuallySet = false; // Track if width was manually set
         this.backgroundType = 'default';
         this.backgroundImage = null;
         
@@ -44,6 +46,18 @@ class PinoutCreator {
         
         document.getElementById('boardHeight').addEventListener('input', (e) => {
             this.boardHeight = parseFloat(e.target.value) || 20;
+            // Auto-calculate width if it hasn't been manually set
+            if (!this.widthManuallySet) {
+                const aspectRatio = 2.5; // height:width ratio
+                this.boardWidth = this.boardHeight * aspectRatio;
+                document.getElementById('boardWidth').value = this.boardWidth;
+            }
+            this.updatePreview();
+        });
+        
+        document.getElementById('boardWidth').addEventListener('input', (e) => {
+            this.boardWidth = parseFloat(e.target.value) || 50;
+            this.widthManuallySet = true; // Mark width as manually set
             this.updatePreview();
         });
         
@@ -283,10 +297,10 @@ class PinoutCreator {
         const chipBody = document.createElement('div');
         chipBody.className = 'chip-body';
         
-        // Calculate width based on board height (maintain aspect ratio)
-        // Typical board aspect ratio is around 1:2 to 1:3 (height:width)
-        const aspectRatio = 2.5; // height:width ratio
-        const width = this.boardHeight * aspectRatio;
+        // Use both height and width for precise control
+        // Convert mm to pixels (approximate: 1mm = 3.78px at 96 DPI)
+        const mmToPx = 3.78;
+        const width = this.boardWidth * mmToPx;
         chipBody.style.width = `${width}px`;
         
         // Apply background based on type
@@ -328,6 +342,7 @@ class PinoutCreator {
             chipName: this.chipName,
             pinCount: this.currentPinCount,
             boardHeight: this.boardHeight,
+            boardWidth: this.boardWidth,
             backgroundType: this.backgroundType,
             backgroundImage: this.backgroundImage,
             pins: this.pins
@@ -383,8 +398,8 @@ class PinoutCreator {
                     <h2>${data.chipName}</h2>
                     <div class="chip-info">
                         <div class="info-item">
-                            <span class="label">Board Height:</span>
-                            <span class="value">${data.boardHeight}mm</span>
+                            <span class="label">Dimensions:</span>
+                            <span class="value">${data.boardWidth}mm × ${data.boardHeight}mm</span>
                         </div>
                         <div class="info-item">
                             <span class="label">Pin Count:</span>
