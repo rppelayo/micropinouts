@@ -292,14 +292,22 @@ class PinoutCreator {
         // Calculate total pin count
         const totalPinCount = this.symmetricPins ? this.currentPinCount : (this.leftPinCount + this.rightPinCount);
         
-        // Calculate dynamic chip height based on pin count
-        // Base height: 400px for up to 28 pins, then scale up
+        // Calculate height based on the longer side (more pins)
+        let maxSidePinCount;
+        if (this.symmetricPins) {
+            maxSidePinCount = Math.ceil(this.currentPinCount / 2);
+        } else {
+            maxSidePinCount = Math.max(this.leftPinCount, this.rightPinCount);
+        }
+        
+        // Calculate dynamic chip height based on the longer side pin count
+        // Base height: 400px for up to 14 pins per side, then scale up
         let chipHeight;
-        if (totalPinCount <= 28) {
+        if (maxSidePinCount <= 14) {
             chipHeight = 400;
         } else {
-            // Scale up: 400px + (pinCount - 28) * 15px
-            chipHeight = 400 + (totalPinCount - 28) * 15;
+            // Scale up: 400px + (maxSidePinCount - 14) * 15px
+            chipHeight = 400 + (maxSidePinCount - 14) * 15;
         }
         
         // Set CSS variables
