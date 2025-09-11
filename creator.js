@@ -740,11 +740,11 @@ class PinoutCreator {
         }
 
         .left-pins .pin {
-            margin-right: 2px;
+            margin-right: 20px;
         }
 
         .right-pins .pin {
-            margin-left: 2px;
+            margin-left: 20px;
         }
 
         .left-pins .pin::before {
@@ -754,7 +754,7 @@ class PinoutCreator {
             height: 8px;
             background: #7f8c8d;
             border-radius: 2px;
-            right: -4px;
+            right: -20px;
         }
 
         .right-pins .pin::before {
@@ -764,7 +764,7 @@ class PinoutCreator {
             height: 8px;
             background: #7f8c8d;
             border-radius: 2px;
-            left: -4px;
+            left: -20px;
         }
 
         .chip-body {
