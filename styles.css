@@ -1022,3 +1022,8 @@ body {
         grid-template-columns: 1fr;
     }
 }
+ 
+ / *   C r e a t o r   C a r d   S t y l e s   * /  
+ . c r e a t o r - c a r d   {   b o r d e r :   2 p x   s o l i d   # 2 7 a e 6 0 ;   b a c k g r o u n d :   l i n e a r - g r a d i e n t ( 1 3 5 d e g ,   # f 8 f f f 8   0 % ,   # e 8 f 5 e 8   1 0 0 % ) ;   }  
+ . c r e a t o r - c a r d   . c a r d - h e a d e r   {   b a c k g r o u n d :   l i n e a r - g r a d i e n t ( 1 3 5 d e g ,   # 2 7 a e 6 0   0 % ,   # 2 2 9 9 5 4   1 0 0 % ) ;   c o l o r :   w h i t e ;   }  
+ 
