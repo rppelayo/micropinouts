@@ -391,6 +391,20 @@
     text-align: center;
     border-radius: 3px;
     font-weight: 600;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Position pin labels correctly for left and right sides */
+.left-pins .pin-label {
+    right: 30px; /* Position to the right of the gray pin rectangle */
+    text-align: right;
+}
+
+.right-pins .pin-label {
+    left: 30px; /* Position to the left of the gray pin rectangle */
+    text-align: left;
 }
 
 /* Responsive Design */
