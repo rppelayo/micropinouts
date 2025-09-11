@@ -1495,8 +1495,16 @@ class PinoutCreator {
             
             // Listen for pin selection events from SVG
             svg.addEventListener('pinSelected', function(event) {
-                const { pinIndex, pinName, pinElement } = event.detail;
-                updateInfoPanel(pinName, pinIndex);
+                const { pinIndex, pinName, pinElement, pinData } = event.detail;
+                if (pinData) {
+                    updateInfoPanel(pinData);
+                } else {
+                    // Fallback: try to find pin data by name
+                    const pin = pinoutData.pins.find(p => p.name === pinName);
+                    if (pin) {
+                        updateInfoPanel(pin);
+                    }
+                }
             });
         }
         
@@ -1692,12 +1700,16 @@ class PinoutCreator {
                 labelBg.classList.add('selected');
                 text.classList.add('selected');
                 
+                // Find the corresponding pin data
+                const pinData = pinoutData.pins.find(p => p.name === labelText);
+                
                 // Trigger pin selection event
                 const event = new CustomEvent('pinSelected', {
                     detail: {
                         pinIndex: index,
                         pinName: labelText,
-                        pinElement: pin
+                        pinElement: pin,
+                        pinData: pinData
                     }
                 });
                 svg.dispatchEvent(event);
