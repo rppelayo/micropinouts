@@ -400,11 +400,15 @@ class PinoutCreator {
             // Scale up: 400px + (maxSidePinCount - 14) * 15px
             chipHeight = 400 + (maxSidePinCount - 14) * 15;
         }
+        chipHeight = Math.round(chipHeight);
+        
+        // Calculate pin spacing with rounding and minimum
+        const spacing = Math.max(12, Math.round(chipHeight / (maxSidePinCount * 2)));
         
         // Set CSS variables
         previewContainer.style.setProperty('--pin-count', totalPinCount);
         previewContainer.style.setProperty('--chip-height', `${chipHeight}px`);
-        previewContainer.style.setProperty('--pin-spacing', `${chipHeight / (maxSidePinCount * 2)}px`);
+        previewContainer.style.setProperty('--pin-spacing', `${spacing}px`);
         
         // Generate pinout structure
         this.generatePinoutStructure(previewContainer);
@@ -463,11 +467,10 @@ class PinoutCreator {
         const chipBody = document.createElement('div');
         chipBody.className = 'chip-body';
         
-        // Use both height and width for precise control
-        // Convert mm to pixels (approximate: 1mm = 3.78px at 96 DPI)
-        const mmToPx = 3.78;
-        const width = this.boardWidth * mmToPx;
-        chipBody.style.width = `${width}px`;
+        // Use exact 96 dpi conversion, then round
+        const PX_PER_MM = 96 / 25.4; // 3.779527559...
+        const widthPx = Math.round(this.boardWidth * PX_PER_MM);
+        chipBody.style.width = `${widthPx}px`;
         
         // Apply background based on type
         if (this.backgroundType === 'image' && this.backgroundImage) {
@@ -688,10 +691,11 @@ class PinoutCreator {
         }
 
         .pin-column {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+            display: grid;
+            grid-auto-rows: var(--pin-spacing, 20px); /* one row per pin */
+            row-gap: 0;                                /* no redistribution */
             height: var(--chip-height, 400px);
+            align-content: start;                       /* start; not space-between */
             padding: 8px 0;
         }
 
@@ -701,13 +705,16 @@ class PinoutCreator {
             position: relative;
             display: flex;
             align-items: center;
+            overflow: visible;
         }
 
         .pin-label {
+            font-size: 14px;     /* px, not rem */
+            line-height: 14px;   /* lock line-height */
+            white-space: nowrap; /* no wrapping that changes row height */
             padding: 0.5rem 1rem;
             border-radius: 6px;
             font-weight: 600;
-            font-size: 0.9rem;
             color: white;
             text-align: center;
             min-width: 80px;
@@ -1066,10 +1073,14 @@ class PinoutCreator {
             } else {
                 chipHeight = 400 + (maxSidePinCount - 14) * 15;
             }
+            chipHeight = Math.round(chipHeight);
+            
+            // Calculate pin spacing with rounding and minimum
+            const spacing = Math.max(12, Math.round(chipHeight / (maxSidePinCount * 2)));
             
             container.style.setProperty('--pin-count', pinoutData.pinCount);
             container.style.setProperty('--chip-height', \`\${chipHeight}px\`);
-            container.style.setProperty('--pin-spacing', \`\${chipHeight / (maxSidePinCount * 2)}px\`);
+            container.style.setProperty('--pin-spacing', \`\${spacing}px\`);
             
             // Clear container
             container.innerHTML = '';
@@ -1141,10 +1152,10 @@ class PinoutCreator {
             const chipBody = document.createElement('div');
             chipBody.className = 'chip-body';
             
-            // Set width based on board width
-            const mmToPx = 3.78;
-            const width = pinoutData.boardWidth * mmToPx;
-            chipBody.style.width = \`\${width}px\`;
+            // Use exact 96 dpi conversion, then round
+            const PX_PER_MM = 96 / 25.4; // 3.779527559...
+            const widthPx = Math.round(pinoutData.boardWidth * PX_PER_MM);
+            chipBody.style.width = \`\${widthPx}px\`;
             
             // Apply background
             if (pinoutData.backgroundType === 'image' && pinoutData.backgroundImage) {
