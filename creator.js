@@ -1599,7 +1599,6 @@ class PinoutCreator {
         }
 
         // Process all pins
-        const pins = pinoutContainer.querySelectorAll('.pin');
         pins.forEach((pin, index) => {
             const pinRect = pin.getBoundingClientRect();
             const containerRect = pinoutContainer.getBoundingClientRect();
