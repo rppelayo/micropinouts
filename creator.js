@@ -540,7 +540,8 @@ class PinoutCreator {
         // Convert preview to SVG for perfect consistency
         const svg = this.convertToSVG();
         if (!svg) {
-            alert('Error: Could not generate SVG from preview');
+            console.error('convertToSVG returned null');
+            alert('Error: Could not generate SVG from preview. Check console for details.');
             return;
         }
         
@@ -1529,13 +1530,33 @@ class PinoutCreator {
 
     // Convert HTML pinout to interactive SVG
     convertToSVG() {
-        const pinoutContainer = document.querySelector('.pinout-container');
-        if (!pinoutContainer) return null;
+        // Try to find the pinout container (works for both creator and published pages)
+        const pinoutContainer = document.querySelector('.pinout-container') || document.querySelector('#previewContainer');
+        if (!pinoutContainer) {
+            console.error('No pinout container found');
+            return null;
+        }
+        
+        console.log('Found pinout container:', pinoutContainer);
+
+        // Check if there are any pins in the container
+        const pins = pinoutContainer.querySelectorAll('.pin');
+        if (pins.length === 0) {
+            console.error('No pins found in container');
+            return null;
+        }
+        
+        console.log('Found', pins.length, 'pins');
 
         // Get dimensions
         const rect = pinoutContainer.getBoundingClientRect();
         const width = rect.width;
         const height = rect.height;
+        
+        if (width === 0 || height === 0) {
+            console.error('Container has zero dimensions:', width, height);
+            return null;
+        }
 
         // Create SVG element
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
