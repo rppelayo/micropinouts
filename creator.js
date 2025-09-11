@@ -13,6 +13,9 @@ class PinoutCreator {
         this.widthManuallySet = false; // Track if width was manually set
         this.backgroundType = 'default';
         this.backgroundImage = null;
+        this.imageOffsetX = 0;
+        this.imageOffsetY = 0;
+        this.imageScale = 100;
         this.pinNumberColor = '#2c3e50';
         
         this.pinTypes = {
@@ -117,6 +120,32 @@ class PinoutCreator {
             this.updatePreview();
         });
         
+        // Image position controls
+        document.getElementById('imageOffsetX').addEventListener('input', (e) => {
+            this.imageOffsetX = parseInt(e.target.value) || 0;
+            this.updatePreview();
+        });
+        
+        document.getElementById('imageOffsetY').addEventListener('input', (e) => {
+            this.imageOffsetY = parseInt(e.target.value) || 0;
+            this.updatePreview();
+        });
+        
+        document.getElementById('imageScale').addEventListener('input', (e) => {
+            this.imageScale = parseInt(e.target.value) || 100;
+            this.updatePreview();
+        });
+        
+        document.getElementById('resetImagePosition').addEventListener('click', () => {
+            this.imageOffsetX = 0;
+            this.imageOffsetY = 0;
+            this.imageScale = 100;
+            document.getElementById('imageOffsetX').value = 0;
+            document.getElementById('imageOffsetY').value = 0;
+            document.getElementById('imageScale').value = 100;
+            this.updatePreview();
+        });
+        
         // Action buttons
         document.getElementById('updatePreview').addEventListener('click', () => {
             this.updatePreview();
@@ -138,13 +167,16 @@ class PinoutCreator {
     toggleBackgroundOptions() {
         const imageUploadGroup = document.getElementById('imageUploadGroup');
         const imageUrlGroup = document.getElementById('imageUrlGroup');
+        const imagePositionGroup = document.getElementById('imagePositionGroup');
         
         if (this.backgroundType === 'image') {
             imageUploadGroup.style.display = 'block';
             imageUrlGroup.style.display = 'block';
+            imagePositionGroup.style.display = 'block';
         } else {
             imageUploadGroup.style.display = 'none';
             imageUrlGroup.style.display = 'none';
+            imagePositionGroup.style.display = 'none';
         }
     }
     
@@ -388,9 +420,9 @@ class PinoutCreator {
         // Apply background based on type
         if (this.backgroundType === 'image' && this.backgroundImage) {
             chipBody.style.backgroundImage = `url(${this.backgroundImage})`;
-            chipBody.style.backgroundSize = 'contain';
+            chipBody.style.backgroundSize = `${this.imageScale}%`;
             chipBody.style.backgroundRepeat = 'no-repeat';
-            chipBody.style.backgroundPosition = 'center';
+            chipBody.style.backgroundPosition = `calc(50% + ${this.imageOffsetX}px) calc(50% + ${this.imageOffsetY}px)`;
             chipBody.style.border = 'none';
         }
         
@@ -435,6 +467,9 @@ class PinoutCreator {
             boardWidth: this.boardWidth,
             backgroundType: this.backgroundType,
             backgroundImage: this.backgroundImage,
+            imageOffsetX: this.imageOffsetX,
+            imageOffsetY: this.imageOffsetY,
+            imageScale: this.imageScale,
             pinNumberColor: this.pinNumberColor,
             pins: this.pins
         };
@@ -597,9 +632,9 @@ class PinoutCreator {
             // Apply background
             if (pinoutData.backgroundType === 'image' && pinoutData.backgroundImage) {
                 chipBody.style.backgroundImage = \`url(\${pinoutData.backgroundImage})\`;
-                chipBody.style.backgroundSize = 'contain';
+                chipBody.style.backgroundSize = \`\${pinoutData.imageScale || 100}%\`;
                 chipBody.style.backgroundRepeat = 'no-repeat';
-                chipBody.style.backgroundPosition = 'center';
+                chipBody.style.backgroundPosition = \`calc(50% + \${pinoutData.imageOffsetX || 0}px) calc(50% + \${pinoutData.imageOffsetY || 0}px)\`;
                 chipBody.style.border = 'none';
             }
             
