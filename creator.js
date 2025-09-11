@@ -1056,9 +1056,25 @@ class PinoutCreator {
         return `
         function generateCustomPinout() {
             const container = document.getElementById('chipDiagram');
+            
+            // Calculate dynamic chip height based on pin count
+            let maxSidePinCount;
+            if (pinoutData.symmetricPins) {
+                maxSidePinCount = Math.ceil(pinoutData.pinCount / 2);
+            } else {
+                maxSidePinCount = Math.max(pinoutData.leftPinCount, pinoutData.rightPinCount);
+            }
+            
+            let chipHeight;
+            if (maxSidePinCount <= 14) {
+                chipHeight = 400;
+            } else {
+                chipHeight = 400 + (maxSidePinCount - 14) * 15;
+            }
+            
             container.style.setProperty('--pin-count', pinoutData.pinCount);
-            container.style.setProperty('--chip-height', '500px');
-            container.style.setProperty('--pin-spacing', \`\${500 / pinoutData.pinCount}px\`);
+            container.style.setProperty('--chip-height', \`\${chipHeight}px\`);
+            container.style.setProperty('--pin-spacing', \`\${chipHeight / (maxSidePinCount * 2)}px\`);
             
             // Clear container
             container.innerHTML = '';
