@@ -395,7 +395,8 @@ class PinoutCreator {
         const numbersContainer = document.createElement('div');
         numbersContainer.className = `pin-numbers-${side}`;
         
-        const totalPinCount = this.symmetricPins ? this.currentPinCount : (this.leftPinCount + this.rightPinCount);
+        // Use the actual number of pins on this side for positioning
+        const sidePinCount = pins.length;
         
         pins.forEach((pin, index) => {
             const pinNum = document.createElement('div');
@@ -404,7 +405,7 @@ class PinoutCreator {
             
             // Calculate position based on the pin's position in the array
             const position = index + 1; // 1-based index
-            const percentage = ((position * 2 - 1) / totalPinCount) * 100;
+            const percentage = ((position * 2 - 1) / (sidePinCount * 2)) * 100;
             pinNum.style.top = `${percentage}%`;
             
             numbersContainer.appendChild(pinNum);
