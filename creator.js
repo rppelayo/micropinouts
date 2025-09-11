@@ -15,7 +15,8 @@ class PinoutCreator {
         this.backgroundImage = null;
         this.imageOffsetX = 0;
         this.imageOffsetY = 0;
-        this.imageScale = 300;
+        this.imageScaleX = 300;
+        this.imageScaleY = 300;
         this.pinNumberColor = '#2c3e50';
         
         this.pinTypes = {
@@ -131,18 +132,29 @@ class PinoutCreator {
             this.updatePreview();
         });
         
-        document.getElementById('imageScale').addEventListener('input', (e) => {
-            this.imageScale = parseInt(e.target.value) || 300;
+        document.getElementById('imageScaleX').addEventListener('input', (e) => {
+            this.imageScaleX = parseInt(e.target.value) || 300;
+            this.updatePreview();
+        });
+        
+        document.getElementById('imageScaleY').addEventListener('input', (e) => {
+            this.imageScaleY = parseInt(e.target.value) || 300;
             this.updatePreview();
         });
         
         document.getElementById('resetImagePosition').addEventListener('click', () => {
             this.imageOffsetX = 0;
             this.imageOffsetY = 0;
-            this.imageScale = 300;
             document.getElementById('imageOffsetX').value = 0;
             document.getElementById('imageOffsetY').value = 0;
-            document.getElementById('imageScale').value = 300;
+            this.updatePreview();
+        });
+        
+        document.getElementById('resetImageScale').addEventListener('click', () => {
+            this.imageScaleX = 300;
+            this.imageScaleY = 300;
+            document.getElementById('imageScaleX').value = 300;
+            document.getElementById('imageScaleY').value = 300;
             this.updatePreview();
         });
         
@@ -420,7 +432,7 @@ class PinoutCreator {
         // Apply background based on type
         if (this.backgroundType === 'image' && this.backgroundImage) {
             chipBody.style.backgroundImage = `url(${this.backgroundImage})`;
-            chipBody.style.backgroundSize = `${this.imageScale}px auto`;
+            chipBody.style.backgroundSize = `${this.imageScaleX}px ${this.imageScaleY}px`;
             chipBody.style.backgroundRepeat = 'no-repeat';
             chipBody.style.backgroundPosition = `calc(50% + ${this.imageOffsetX}px) calc(50% + ${this.imageOffsetY}px)`;
             chipBody.style.border = 'none';
@@ -469,7 +481,8 @@ class PinoutCreator {
             backgroundImage: this.backgroundImage,
             imageOffsetX: this.imageOffsetX,
             imageOffsetY: this.imageOffsetY,
-            imageScale: this.imageScale,
+            imageScaleX: this.imageScaleX,
+            imageScaleY: this.imageScaleY,
             pinNumberColor: this.pinNumberColor,
             pins: this.pins
         };
@@ -632,7 +645,7 @@ class PinoutCreator {
             // Apply background
             if (pinoutData.backgroundType === 'image' && pinoutData.backgroundImage) {
                 chipBody.style.backgroundImage = \`url(\${pinoutData.backgroundImage})\`;
-                chipBody.style.backgroundSize = \`\${pinoutData.imageScale || 100}px auto\`;
+                chipBody.style.backgroundSize = \`\${pinoutData.imageScaleX || 300}px \${pinoutData.imageScaleY || 300}px\`;
                 chipBody.style.backgroundRepeat = 'no-repeat';
                 chipBody.style.backgroundPosition = \`calc(50% + \${pinoutData.imageOffsetX || 0}px) calc(50% + \${pinoutData.imageOffsetY || 0}px)\`;
                 chipBody.style.border = 'none';
