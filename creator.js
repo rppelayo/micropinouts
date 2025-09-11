@@ -628,6 +628,17 @@ class PinoutCreator {
             margin-bottom: 2rem;
         }
 
+        /* Right side panels */
+        .info-panel,
+        .specs-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
         /* Pinout section */
         .pinout-section {
             background: rgba(255, 255, 255, 0.95);
@@ -787,20 +798,6 @@ class PinoutCreator {
         .pin-type-special { background: #e67e22; }
         .pin-type-other { background: #95a5a6; }
 
-        /* Info panel */
-        .info-panel {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            padding: 2rem;
-            margin-bottom: 1rem;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
-
-        .pin-details {
-            margin-bottom: 2rem;
-        }
-
         .pin-details h3 {
             color: #2d3748;
             margin-bottom: 1rem;
@@ -848,12 +845,13 @@ class PinoutCreator {
             text-align: right;
         }
 
-        /* Downloads panel */
-        .downloads-panel {
+        /* Downloads section */
+        .downloads-section {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border-radius: 12px;
             padding: 2rem;
+            margin: 2rem 0;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         }
 
@@ -861,49 +859,14 @@ class PinoutCreator {
             color: #2d3748;
             margin-bottom: 1.5rem;
             font-size: 1.25rem;
+            text-align: center;
         }
 
-        .action-buttons {
+        .download-buttons {
             display: flex;
-            flex-direction: column;
             gap: 1rem;
-        }
-
-        .action-btn {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 1rem;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            background: white;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            color: #2d3748;
-        }
-
-        .action-btn:hover {
-            border-color: #667eea;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
-        }
-
-        .download-btn:hover {
-            background: #f7fafc;
-        }
-
-        .datasheet-btn:hover {
-            background: #f0f9ff;
-        }
-
-        .btn-icon {
-            font-size: 1.2rem;
-        }
-
-        .btn-text {
-            font-weight: 600;
-            font-size: 0.9rem;
+            justify-content: center;
+            flex-wrap: wrap;
         }
 
         .btn {
@@ -1032,8 +995,9 @@ class PinoutCreator {
                 min-height: auto;
             }
 
-            .action-buttons {
+            .download-buttons {
                 flex-direction: column;
+                align-items: center;
             }
 
             .nav {
@@ -1343,7 +1307,9 @@ class PinoutCreator {
                         <h3>Pin Information</h3>
                         <p class="pin-placeholder">Click on a pin to view details</p>
                     </div>
+                </div>
 
+                <div class="specs-panel">
                     <div class="chip-specs">
                         <h3>Specifications</h3>
                         <div class="spec-grid">
@@ -1366,26 +1332,6 @@ class PinoutCreator {
                         </div>
                     </div>
                 </div>
-
-                <div class="downloads-panel">
-                    <div class="downloads-section">
-                        <h3>Downloads</h3>
-                        <div class="action-buttons">
-                            <button id="downloadPdf" class="action-btn download-btn" title="Download Pinout as PDF">
-                                <span class="btn-icon">📄</span>
-                                <span class="btn-text">Pinout as PDF</span>
-                            </button>
-                            <button id="downloadImage" class="action-btn download-btn" title="Download Pinout as Image (PNG)">
-                                <span class="btn-icon">🖼️</span>
-                                <span class="btn-text">Pinout as Image (PNG)</span>
-                            </button>
-                            <button id="datasheetLink" class="action-btn datasheet-btn" title="View Chip Datasheet">
-                                <span class="btn-icon">📋</span>
-                                <span class="btn-text">Chip Datasheet</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
             </div>
             
             <!-- Page Content -->
@@ -1393,6 +1339,24 @@ class PinoutCreator {
                 <div class="container">
                     <div class="content-wrapper">
                         ${data.pageContent || ''}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Downloads Section -->
+            <div class="downloads-section">
+                <div class="container">
+                    <h3>Downloads</h3>
+                    <div class="download-buttons">
+                        <button id="downloadPdf" class="btn btn-primary">
+                            <i class="fas fa-file-pdf"></i> Pinout as PDF
+                        </button>
+                        <button id="downloadImage" class="btn btn-primary">
+                            <i class="fas fa-image"></i> Pinout as Image (PNG)
+                        </button>
+                        <button id="datasheetLink" class="btn btn-secondary">
+                            <i class="fas fa-external-link-alt"></i> Chip Datasheet
+                        </button>
                     </div>
                 </div>
             </div>
