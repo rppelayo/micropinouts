@@ -11,16 +11,15 @@
 <body>
     <header class="header">
         <div class="container">
-            <div class="header-content">
-                <h1 class="logo">
-                    <a href="index.html">MicroPinouts</a>
-                </h1>
-                <nav class="nav">
-                    <a href="index.html" class="nav-link active">Home</a>
-                    <a href="pic16f84a.html" class="nav-link">PIC16F84A</a>
-                    <a href="esp32.html" class="nav-link">ESP32</a>
+            <h1 class="logo">
+                <a href="index.html">MicroPinouts</a>
+            </h1>
+            <div class="header-actions">
+                <nav id="authNav" class="auth-nav" style="display: none;">
                     <a href="pinout-creator.html" class="nav-link">Pinout Creator</a>
+                    <a href="manage-pinouts.html" class="nav-link">Manage Pinouts</a>
                 </nav>
+                <button id="loginBtn" class="btn btn-primary">Login</button>
             </div>
         </div>
     </header>
@@ -31,10 +30,27 @@
                 <h1 class="hero-title">Interactive Microcontroller Pinout Reference</h1>
                 <p class="hero-subtitle">Explore detailed pinout diagrams for popular microcontrollers with interactive features and downloadable resources.</p>
                 
+                <!-- Category Filter -->
+                <div class="category-filter">
+                    <h3>Filter by Category</h3>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-category="all">All Categories</button>
+                        <button class="filter-btn" data-category="microcontroller-8bit">🔧 8-bit Microcontrollers</button>
+                        <button class="filter-btn" data-category="microcontroller-16bit">⚙️ 16-bit Microcontrollers</button>
+                        <button class="filter-btn" data-category="microcontroller-32bit">🔩 32-bit Microcontrollers</button>
+                        <button class="filter-btn" data-category="development-board">📱 Development Boards</button>
+                        <button class="filter-btn" data-category="sensor-module">📡 Sensors & Modules</button>
+                        <button class="filter-btn" data-category="communication-ic">📶 Communication ICs</button>
+                        <button class="filter-btn" data-category="power-management">⚡ Power Management</button>
+                        <button class="filter-btn" data-category="memory-storage">💾 Memory & Storage</button>
+                        <button class="filter-btn" data-category="custom-other">🔧 Custom/Other</button>
+                    </div>
+                </div>
+                
                 <div class="microcontroller-grid">
-                    <div class="microcontroller-card">
+                    <div class="microcontroller-card" data-category="microcontroller-8bit">
                         <div class="card-header">
-                            <h3>PIC16F84A</h3>
+                            <h3>🔧 PIC16F84A</h3>
                             <span class="card-badge">8-bit RISC</span>
                         </div>
                         <div class="card-content">
@@ -51,9 +67,9 @@
                         </div>
                     </div>
 
-                    <div class="microcontroller-card">
+                    <div class="microcontroller-card" data-category="development-board">
                         <div class="card-header">
-                            <h3>ESP32</h3>
+                            <h3>📱 ESP32</h3>
                             <span class="card-badge">Dual-Core WiFi</span>
                         </div>
                         <div class="card-content">
@@ -70,9 +86,9 @@
                         </div>
                     </div>
 
-                    <div class="microcontroller-card creator-card">
+                    <div class="microcontroller-card creator-card" data-category="custom-other" id="creatorCard" style="display: none;">
                         <div class="card-header">
-                            <h3>Pinout Creator</h3>
+                            <h3>🔧 Pinout Creator</h3>
                             <span class="card-badge">Custom</span>
                         </div>
                         <div class="card-content">
@@ -88,6 +104,7 @@
                             <a href="pinout-creator.html" class="btn btn-success">Create Pinout</a>
                         </div>
                     </div>
+
                 </div>
             </div>
 
@@ -124,5 +141,31 @@
             <p>&copy; 2024 MicroPinouts. Interactive microcontroller pinout reference.</p>
         </div>
     </footer>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Login to MicroPinouts</h3>
+                <button class="modal-close" id="closeLoginModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">Login</button>
+                </form>
+                <div id="loginError" class="error-message" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
 </body>
 </html>

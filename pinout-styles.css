@@ -72,34 +72,45 @@
     text-align: left;
 }
 
-/* Pin type colors */
+/* Pin type colors - matching creator colors */
 .power-positive {
-    background: #e53e3e !important;
+    background: #e74c3c !important;
 }
 
 .power-negative {
-    background: #000000 !important;
+    background: #2c3e50 !important;
 }
 
 .gpio {
-    background: #38a169 !important;
+    background: #27ae60 !important;
 }
 
 .clock {
-    background: #3182ce !important;
+    background: #9b59b6 !important;
 }
 
 .reset {
-    background: #d69e2e !important;
+    background: #e67e22 !important;
 }
 
 .special {
-    background: #805ad5 !important;
+    background: #e67e22 !important;
 }
 
 .analog {
-    background: #dd6b20 !important;
+    background: #f39c12 !important;
 }
+
+/* Creator pin type classes - for SVG content */
+.pin-type-power { background: #e74c3c !important; color: white; }
+.pin-type-gnd { background: #2c3e50 !important; color: white; }
+.pin-type-gpio { background: #27ae60 !important; color: white; }
+.pin-type-data { background: #3498db !important; color: white; }
+.pin-type-clock { background: #9b59b6 !important; color: white; }
+.pin-type-analog { background: #f39c12 !important; color: white; }
+.pin-type-reset { background: #e67e22 !important; color: white; }
+.pin-type-special { background: #e67e22 !important; color: white; }
+.pin-type-other { background: #95a5a6 !important; color: white; }
 
 /* Chip body - using calculated height */
 .chip-body {
@@ -310,10 +321,127 @@
     transform: translateY(-50%);
 }
 
+/* Hide chip-body pseudo-elements for all pinouts */
+.chip-body::before,
+.chip-body::after {
+    display: none !important; /* Hide both ::before and ::after pseudo-elements */
+}
+
 /* ESP32 gray pins - using individual pin rectangles only */
 .esp32-pinout .chip-body::before,
 .esp32-pinout .chip-body::after {
     display: none; /* Hide both ::before and ::after pseudo-elements */
+}
+
+/* Content section styling */
+.content-section {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.content-text {
+    line-height: 1.6;
+    color: #2c3e50;
+}
+
+.content-text h1,
+.content-text h2,
+.content-text h3,
+.content-text h4,
+.content-text h5,
+.content-text h6 {
+    color: #2c3e50;
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.content-text h1:first-child,
+.content-text h2:first-child,
+.content-text h3:first-child {
+    margin-top: 0;
+}
+
+.content-text p {
+    margin-bottom: 1rem;
+}
+
+.content-text ul,
+.content-text ol {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+}
+
+.content-text li {
+    margin-bottom: 0.25rem;
+}
+
+.content-text strong {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.content-text em {
+    font-style: italic;
+    color: #7f8c8d;
+}
+
+/* Download buttons styling */
+.downloads-section .action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+.downloads-section .action-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    width: 100%;
+    justify-content: flex-start;
+}
+
+.downloads-section .download-btn {
+    background: #e6fffa;
+    color: #234e52;
+    border: 1px solid #81e6d9;
+}
+
+.downloads-section .download-btn:hover {
+    background: #b2f5ea;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.downloads-section .datasheet-btn {
+    background: #f0f9ff;
+    color: #1e40af;
+    border: 1px solid #93c5fd;
+}
+
+.downloads-section .datasheet-btn:hover {
+    background: #dbeafe;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.downloads-section .btn-icon {
+    font-size: 1rem;
+}
+
+.downloads-section .btn-text {
+    font-weight: 500;
 }
 
 /* Responsive design for pinout */

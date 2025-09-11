@@ -138,6 +138,7 @@ const pinDetailsElement = document.getElementById('pinDetails');
 document.addEventListener('DOMContentLoaded', function() {
     initializePinout();
     setupEventListeners();
+    initializeCategoryFilter();
 });
 
 // Initialize pinout functionality
@@ -705,6 +706,35 @@ function createSimplePDF(doc) {
     doc.save('PIC16F84A_Pinout.pdf');
 }
 
+// Category Filter functionality
+function initializeCategoryFilter() {
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const cards = document.querySelectorAll('.microcontroller-card');
+    
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Remove active class from all buttons
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            // Add active class to clicked button
+            this.classList.add('active');
+            
+            const selectedCategory = this.getAttribute('data-category');
+            
+            // Filter cards
+            cards.forEach(card => {
+                const cardCategory = card.getAttribute('data-category');
+                
+                if (selectedCategory === 'all' || cardCategory === selectedCategory) {
+                    card.style.display = 'block';
+                    card.style.animation = 'fadeIn 0.3s ease-in';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    });
+}
+
 // Export data for potential future use
 window.MicroPinouts = {
     data: pic16f84aData,
@@ -712,5 +742,6 @@ window.MicroPinouts = {
     deselectPin,
     getPinTypeColor,
     generatePinoutImage,
-    generatePinoutPDF
+    generatePinoutPDF,
+    initializeCategoryFilter
 };

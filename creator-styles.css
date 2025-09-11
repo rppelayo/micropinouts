@@ -219,6 +219,7 @@
 .pin-type-data { background: #3498db; color: white; }
 .pin-type-clock { background: #9b59b6; color: white; }
 .pin-type-analog { background: #f39c12; color: white; }
+.pin-type-reset { background: #e67e22; color: white; }
 .pin-type-special { background: #e67e22; color: white; }
 .pin-type-other { background: #95a5a6; color: white; }
 
@@ -285,6 +286,27 @@
     clear: none;
 }
 
+/* Preview Category Indicator */
+.preview-category-indicator {
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.category-badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.category-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
 .preview-panel h2 {
     margin: 0 0 1.5rem 0;
     color: #2c3e50;
@@ -332,6 +354,12 @@
     border: 2px solid #bdc3c7;
     border-radius: 8px;
     position: relative;
+}
+
+/* Hide chip-body pseudo-elements for all pinouts */
+.chip-body::before,
+.chip-body::after {
+    display: none !important; /* Hide both ::before and ::after pseudo-elements */
 }
 
 .custom-pinout .chip-body::before,

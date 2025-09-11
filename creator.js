@@ -8,6 +8,8 @@ class PinoutCreator {
         this.rightPinCount = 8;
         this.symmetricPins = true;
         this.chipName = 'Custom Chip';
+        this.chipCategory = 'microcontroller-8bit';
+        this.datasheetLink = '';
         this.boardHeight = 20; // in mm
         this.boardWidth = 50; // in mm
         this.widthManuallySet = false; // Track if width was manually set
@@ -19,9 +21,12 @@ class PinoutCreator {
         this.imageScaleY = 300;
         this.pinNumberColor = '#2c3e50';
         this.pageTitle = 'Custom Pinout Diagram';
+        this.pageSlug = '';
         this.metaDescription = '';
         this.pageContent = '';
         this.quill = null;
+        this.isEditMode = false;
+        this.editPinoutId = null;
         
         this.pinTypes = {
             'power': { name: 'Power', color: '#e74c3c', class: 'pin-type-power' },
@@ -30,18 +35,146 @@ class PinoutCreator {
             'data': { name: 'Data', color: '#3498db', class: 'pin-type-data' },
             'clock': { name: 'Clock', color: '#9b59b6', class: 'pin-type-clock' },
             'analog': { name: 'Analog', color: '#f39c12', class: 'pin-type-analog' },
+            'reset': { name: 'Reset', color: '#e67e22', class: 'pin-type-reset' },
             'special': { name: 'Special', color: '#e67e22', class: 'pin-type-special' },
             'other': { name: 'Other', color: '#95a5a6', class: 'pin-type-other' }
+        };
+        
+        this.categories = {
+            'microcontroller-8bit': { name: 'Microcontroller (8-bit)', icon: '🔧', color: '#3498db' },
+            'microcontroller-16bit': { name: 'Microcontroller (16-bit)', icon: '⚙️', color: '#9b59b6' },
+            'microcontroller-32bit': { name: 'Microcontroller (32-bit)', icon: '🔩', color: '#e74c3c' },
+            'development-board': { name: 'Development Board', icon: '📱', color: '#27ae60' },
+            'sensor-module': { name: 'Sensor & Module', icon: '📡', color: '#f39c12' },
+            'communication-ic': { name: 'Communication IC', icon: '📶', color: '#1abc9c' },
+            'power-management': { name: 'Power Management', icon: '⚡', color: '#e67e22' },
+            'memory-storage': { name: 'Memory & Storage', icon: '💾', color: '#34495e' },
+            'custom-other': { name: 'Custom/Other', icon: '🔧', color: '#95a5a6' }
         };
         
         this.init();
     }
     
+    generateSlug(text) {
+        return text
+            .toLowerCase()
+            .trim()
+            .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
+            .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
+            .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+    }
+    
+    generateSlugFromTitle() {
+        // Generate slug from chip name if available, otherwise from page title
+        const sourceText = this.chipName && this.chipName !== 'Custom Chip' ? this.chipName : this.pageTitle;
+        return this.generateSlug(sourceText);
+    }
+    
     init() {
+        this.checkEditMode();
         this.setupEventListeners();
         this.initializeRichTextEditor();
         this.generateInitialPins();
         this.updatePreview();
+    }
+    
+    checkEditMode() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const editId = urlParams.get('edit');
+        
+        if (editId) {
+            this.isEditMode = true;
+            this.editPinoutId = editId;
+            this.loadPinoutForEdit(editId);
+        }
+    }
+    
+    async loadPinoutForEdit(id) {
+        try {
+            const response = await fetch(`api/pinouts.php/${id}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                const pinout = result.data;
+                this.populateFormWithPinoutData(pinout);
+            } else {
+                console.error('Failed to load pinout:', result.error);
+                alert('Failed to load pinout for editing');
+            }
+        } catch (error) {
+            console.error('Error loading pinout:', error);
+            alert('Failed to load pinout for editing');
+        }
+    }
+    
+    populateFormWithPinoutData(pinout) {
+        // Populate form fields
+        document.getElementById('chipName').value = pinout.chip_name;
+        document.getElementById('chipCategory').value = pinout.category_id;
+        document.getElementById('datasheetLink').value = pinout.datasheet_link || '';
+        document.getElementById('boardHeight').value = pinout.board_height;
+        document.getElementById('boardWidth').value = pinout.board_width;
+        document.getElementById('pinNumberColor').value = pinout.pin_number_color;
+        document.getElementById('pageTitle').value = pinout.title;
+        document.getElementById('pageSlug').value = pinout.page_slug || '';
+        document.getElementById('metaDescription').value = pinout.meta_description || '';
+        
+        // Update internal state
+        this.chipName = pinout.chip_name;
+        this.chipCategory = pinout.category_id;
+        this.datasheetLink = pinout.datasheet_link || '';
+        this.boardHeight = pinout.board_height;
+        this.boardWidth = pinout.board_width;
+        this.pinNumberColor = pinout.pin_number_color;
+        this.pageTitle = pinout.title;
+        this.pageSlug = pinout.page_slug || '';
+        this.metaDescription = pinout.meta_description || '';
+        
+        // Set pin configuration
+        this.currentPinCount = pinout.pin_count;
+        this.leftPinCount = pinout.left_pin_count;
+        this.rightPinCount = pinout.right_pin_count;
+        this.symmetricPins = pinout.symmetric_pins;
+        
+        // Update pin count inputs
+        document.getElementById('pinCount').value = pinout.pin_count;
+        document.getElementById('leftPinCount').value = pinout.left_pin_count;
+        document.getElementById('rightPinCount').value = pinout.right_pin_count;
+        document.getElementById('symmetricPins').checked = pinout.symmetric_pins;
+        
+        // Set background settings
+        document.getElementById('backgroundType').value = pinout.background_type;
+        this.backgroundType = pinout.background_type;
+        this.backgroundImage = pinout.background_image;
+        this.imageOffsetX = pinout.image_offset_x;
+        this.imageOffsetY = pinout.image_offset_y;
+        this.imageScaleX = pinout.image_scale_x;
+        this.imageScaleY = pinout.image_scale_y;
+        
+        // Update background inputs
+        document.getElementById('imageOffsetX').value = pinout.image_offset_x;
+        document.getElementById('imageOffsetY').value = pinout.image_offset_y;
+        document.getElementById('imageScaleX').value = pinout.image_scale_x;
+        document.getElementById('imageScaleY').value = pinout.image_scale_y;
+        
+        // Set pins data
+        this.pins = pinout.pins || [];
+        
+        // Set page content
+        if (this.quill && pinout.page_content) {
+            this.quill.root.innerHTML = pinout.page_content;
+            this.pageContent = pinout.page_content;
+        }
+        
+        // Update UI
+        this.toggleBackgroundOptions();
+        this.togglePinCountInputs();
+        this.renderPinList();
+        this.updatePreview();
+        
+        // Update page title and button text
+        document.title = `Edit ${pinout.chip_name} - Pinout Creator`;
+        document.getElementById('publishPinout').innerHTML = '<i class="fas fa-globe"></i> Update Pinout';
     }
     
     setupEventListeners() {
@@ -49,6 +182,15 @@ class PinoutCreator {
         document.getElementById('chipName').addEventListener('input', (e) => {
             this.chipName = e.target.value;
             this.updatePreview();
+        });
+        
+        document.getElementById('chipCategory').addEventListener('change', (e) => {
+            this.chipCategory = e.target.value;
+            this.updatePreview();
+        });
+        
+        document.getElementById('datasheetLink').addEventListener('input', (e) => {
+            this.datasheetLink = e.target.value;
         });
         
         document.getElementById('symmetricPins').addEventListener('change', (e) => {
@@ -168,6 +310,10 @@ class PinoutCreator {
             this.updatePreview();
         });
         
+        document.getElementById('previewPinout').addEventListener('click', () => {
+            this.previewPinout();
+        });
+        
         document.getElementById('publishPinout').addEventListener('click', () => {
             this.publishPinout();
         });
@@ -187,6 +333,15 @@ class PinoutCreator {
         // SEO content
         document.getElementById('pageTitle').addEventListener('input', (e) => {
             this.pageTitle = e.target.value;
+            // Auto-generate slug if it's empty or matches the previous auto-generated slug
+            if (!this.pageSlug || this.pageSlug === this.generateSlugFromTitle()) {
+                this.pageSlug = this.generateSlugFromTitle();
+                document.getElementById('pageSlug').value = this.pageSlug;
+            }
+        });
+        
+        document.getElementById('pageSlug').addEventListener('input', (e) => {
+            this.pageSlug = e.target.value;
         });
         
         document.getElementById('metaDescription').addEventListener('input', (e) => {
@@ -460,7 +615,8 @@ class PinoutCreator {
         pinDiv.dataset.pinNumber = pin.number;
         
         const label = document.createElement('div');
-        label.className = `pin-label ${this.pinTypes[pin.type].class}`;
+        const pinType = this.pinTypes[pin.type] || this.pinTypes['other'];
+        label.className = `pin-label ${pinType.class}`;
         label.textContent = pin.name;
         
         pinDiv.appendChild(label);
@@ -512,51 +668,124 @@ class PinoutCreator {
         return numbersContainer;
     }
     
-    publishPinout() {
-        // Create and open a new page with the generated pinout
+    previewPinout() {
+        // Save current data to localStorage for preview
         const totalPinCount = this.symmetricPins ? this.currentPinCount : (this.leftPinCount + this.rightPinCount);
         
         const pinoutData = {
-            chipName: this.chipName,
-            pinCount: totalPinCount,
-            leftPinCount: this.leftPinCount,
-            rightPinCount: this.rightPinCount,
-            symmetricPins: this.symmetricPins,
-            boardHeight: this.boardHeight,
-            boardWidth: this.boardWidth,
-            backgroundType: this.backgroundType,
-            backgroundImage: this.backgroundImage,
-            imageOffsetX: this.imageOffsetX,
-            imageOffsetY: this.imageOffsetY,
-            imageScaleX: this.imageScaleX,
-            imageScaleY: this.imageScaleY,
-            pinNumberColor: this.pinNumberColor,
-            pageTitle: this.pageTitle,
-            metaDescription: this.metaDescription,
-            pageContent: this.pageContent,
+            chip_name: this.chipName,
+            category_id: this.chipCategory,
+            category_name: this.getCategoryInfo(this.chipCategory).name,
+            datasheet_link: this.datasheetLink,
+            pin_count: totalPinCount,
+            left_pin_count: this.leftPinCount,
+            right_pin_count: this.rightPinCount,
+            symmetric_pins: this.symmetricPins,
+            board_height: this.boardHeight,
+            board_width: this.boardWidth,
+            background_type: this.backgroundType,
+            background_image: this.backgroundImage,
+            image_offset_x: this.imageOffsetX,
+            image_offset_y: this.imageOffsetY,
+            image_scale_x: this.imageScaleX,
+            image_scale_y: this.imageScaleY,
+            pin_number_color: this.pinNumberColor,
+            page_title: this.pageTitle,
+            page_slug: this.pageSlug || this.generateSlugFromTitle(),
+            meta_description: this.metaDescription,
+            page_content: this.pageContent,
             pins: this.pins
         };
         
-        // Convert preview to SVG for perfect consistency
-        const svg = this.convertToSVG();
-        if (!svg) {
-            console.error('convertToSVG returned null');
-            alert('Error: Could not generate SVG from preview. Check console for details.');
-            return;
+        // Save to localStorage for preview page
+        localStorage.setItem('pinoutPreviewData', JSON.stringify(pinoutData));
+        
+        // Open preview in new tab
+        window.open('preview.html', '_blank');
+    }
+    
+    async publishPinout() {
+        const totalPinCount = this.symmetricPins ? this.currentPinCount : (this.leftPinCount + this.rightPinCount);
+        
+        const pinoutData = {
+            title: this.pageTitle,
+            chip_name: this.chipName,
+            category_id: this.chipCategory,
+            datasheet_link: this.datasheetLink,
+            page_slug: this.pageSlug || this.generateSlugFromTitle(),
+            pin_count: totalPinCount,
+            left_pin_count: this.leftPinCount,
+            right_pin_count: this.rightPinCount,
+            symmetric_pins: this.symmetricPins,
+            board_height: this.boardHeight,
+            board_width: this.boardWidth,
+            background_type: this.backgroundType,
+            background_image: this.backgroundImage,
+            image_offset_x: this.imageOffsetX,
+            image_offset_y: this.imageOffsetY,
+            image_scale_x: this.imageScaleX,
+            image_scale_y: this.imageScaleY,
+            pin_number_color: this.pinNumberColor,
+            meta_description: this.metaDescription,
+            page_content: this.pageContent,
+            pins: this.pins
+        };
+        
+        try {
+            // Convert preview to SVG
+            const svg = this.convertToSVG();
+            if (svg) {
+                pinoutData.svg_content = new XMLSerializer().serializeToString(svg);
+            }
+            
+            // Generate HTML content
+            const htmlContent = this.generatePinoutHTML(pinoutData, svg);
+            pinoutData.html_content = htmlContent;
+            
+            let response;
+            if (this.isEditMode) {
+                // Update existing pinout
+                response = await fetch(`api/pinouts.php/${this.editPinoutId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(pinoutData)
+                });
+            } else {
+                // Create new pinout
+                response = await fetch('api/pinouts.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(pinoutData)
+                });
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                if (this.isEditMode) {
+                    alert('Pinout updated successfully!');
+                    window.location.href = 'manage-pinouts.html';
+                } else {
+                    alert('Pinout published successfully!');
+                    // Open preview in new tab using slug
+                    const slug = result.data.page_slug || result.data.id;
+                    window.open(`/${slug}`, '_blank');
+                }
+            } else {
+                alert('Failed to publish pinout: ' + (result.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error publishing pinout:', error);
+            alert('Failed to publish pinout. Please try again.');
         }
-        
-        // Generate HTML content with embedded SVG
-        const htmlContent = this.generatePinoutHTML(pinoutData, svg);
-        
-        // Open the generated page in a new tab
-        const blob = new Blob([htmlContent], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const newWindow = window.open(url, '_blank');
-        
-        // Clean up the URL after a short delay to allow the page to load
-        setTimeout(() => {
-            URL.revokeObjectURL(url);
-        }, 1000);
+    }
+    
+    getCategoryInfo(categoryKey) {
+        return this.categories[categoryKey] || this.categories['custom-other'];
     }
     
     getEmbeddedCSS() {
@@ -700,6 +929,28 @@ class PinoutCreator {
             gap: 0;
             margin-bottom: 2rem;
             min-height: 400px;
+            width: 100%;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .chip-diagram svg {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .pinout-info {
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .pinout-details {
+            color: #718096;
+            font-size: 1rem;
+            margin: 0;
+            font-weight: 500;
         }
 
         .pin-column {
@@ -1365,8 +1616,8 @@ class PinoutCreator {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${data.pageTitle || data.chipName + ' Pinout - MicroPinouts'}</title>
-    <meta name="description" content="${data.metaDescription || 'Complete pinout diagram for ' + data.chipName + ' microcontroller with detailed pin information and specifications.'}">
+    <title>${data.title || data.chip_name + ' Pinout - MicroPinouts'}</title>
+    <meta name="description" content="${data.meta_description || 'Complete pinout diagram for ' + data.chip_name + ' microcontroller with detailed pin information and specifications.'}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1396,19 +1647,22 @@ class PinoutCreator {
                 <div class="left-column">
                     <div class="pinout-section">
                         <div class="section-header">
-                            <h2>${data.chipName}</h2>
-                            <p class="section-subtitle">${data.symmetricPins ? `${data.pinCount} pins (symmetric)` : `${data.leftPinCount}L + ${data.rightPinCount}R pins`} - ${data.boardWidth}mm × ${data.boardHeight}mm</p>
+                            <h2>${data.chip_name}</h2>
                         </div>
                         
                         <div class="chip-diagram custom-pinout" id="chipDiagram">
                             ${svg ? new XMLSerializer().serializeToString(svg) : '<!-- Pinout will be generated by JavaScript -->'}
+                        </div>
+                        
+                        <div class="pinout-info">
+                            <p class="pinout-details">${this.getCategoryInfo(data.category_id).icon} ${this.getCategoryInfo(data.category_id).name} • ${data.symmetric_pins ? `${data.pin_count} pins (symmetric)` : `${data.left_pin_count}L + ${data.right_pin_count}R pins`} • ${data.board_width}mm × ${data.board_height}mm</p>
                         </div>
                     </div>
                     
                     <!-- Page Content -->
                     <div class="content-section">
                         <div class="content-wrapper">
-                            ${data.pageContent || ''}
+                            ${data.page_content || ''}
                         </div>
                     </div>
                 </div>
@@ -1426,20 +1680,24 @@ class PinoutCreator {
                             <h3>Specifications</h3>
                             <div class="spec-grid">
                                 <div class="spec-item">
+                                    <span class="spec-label">Category:</span>
+                                    <span class="spec-value">${this.getCategoryInfo(data.category_id).icon} ${this.getCategoryInfo(data.category_id).name}</span>
+                                </div>
+                                <div class="spec-item">
                                     <span class="spec-label">Dimensions:</span>
-                                    <span class="spec-value">${data.boardWidth}mm × ${data.boardHeight}mm</span>
+                                    <span class="spec-value">${data.board_width}mm × ${data.board_height}mm</span>
                                 </div>
                                 <div class="spec-item">
                                     <span class="spec-label">Pin Configuration:</span>
-                                    <span class="spec-value">${data.symmetricPins ? `${data.pinCount} pins (symmetric)` : `${data.leftPinCount}L + ${data.rightPinCount}R`}</span>
+                                    <span class="spec-value">${data.symmetric_pins ? `${data.pin_count} pins (symmetric)` : `${data.left_pin_count}L + ${data.right_pin_count}R`}</span>
                                 </div>
                                 <div class="spec-item">
                                     <span class="spec-label">Background:</span>
-                                    <span class="spec-value">${data.backgroundType === 'image' ? 'Custom Image' : 'Default'}</span>
+                                    <span class="spec-value">${data.background_type === 'image' ? 'Custom Image' : 'Default'}</span>
                                 </div>
                                 <div class="spec-item">
                                     <span class="spec-label">Pin Count:</span>
-                                    <span class="spec-value">${data.pinCount} total</span>
+                                    <span class="spec-value">${data.pin_count} total</span>
                                 </div>
                             </div>
                         </div>
@@ -1595,12 +1853,15 @@ class PinoutCreator {
             return null;
         }
 
-        // Create SVG element
+        // Create SVG element with proper sizing
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('width', width);
-        svg.setAttribute('height', height);
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', 'auto');
         svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
         svg.style.backgroundColor = '#f8f9fa';
+        svg.style.maxWidth = '100%';
+        svg.style.display = 'block';
+        svg.style.margin = '0 auto';
 
         // Get chip body element
         const chipBody = pinoutContainer.querySelector('.chip-body');
