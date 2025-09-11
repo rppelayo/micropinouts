@@ -264,6 +264,7 @@
 
 .custom-pinout .pin-column {
     height: var(--chip-height);
+    min-height: 400px; /* Minimum height for very small pin counts */
 }
 
 .custom-pinout .chip-body {

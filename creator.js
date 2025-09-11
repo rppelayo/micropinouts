@@ -210,10 +210,20 @@ class PinoutCreator {
         const previewContainer = document.getElementById('previewContainer');
         previewContainer.innerHTML = '';
         
+        // Calculate dynamic chip height based on pin count
+        // Base height: 400px for up to 28 pins, then scale up
+        let chipHeight;
+        if (this.currentPinCount <= 28) {
+            chipHeight = 400;
+        } else {
+            // Scale up: 400px + (pinCount - 28) * 15px
+            chipHeight = 400 + (this.currentPinCount - 28) * 15;
+        }
+        
         // Set CSS variables
         previewContainer.style.setProperty('--pin-count', this.currentPinCount);
-        previewContainer.style.setProperty('--chip-height', '400px');
-        previewContainer.style.setProperty('--pin-spacing', `${400 / this.currentPinCount}px`);
+        previewContainer.style.setProperty('--chip-height', `${chipHeight}px`);
+        previewContainer.style.setProperty('--pin-spacing', `${chipHeight / this.currentPinCount}px`);
         
         // Generate pinout structure
         this.generatePinoutStructure(previewContainer);
