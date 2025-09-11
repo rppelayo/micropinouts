@@ -40,6 +40,71 @@ body {
     margin-top: 2rem;
 }
 
+/* Content Section */
+.content-section {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    margin: 2rem 0;
+    padding: 2rem 0;
+}
+
+.content-wrapper {
+    max-width: 800px;
+    margin: 0 auto;
+    line-height: 1.8;
+}
+
+.content-wrapper h1,
+.content-wrapper h2,
+.content-wrapper h3 {
+    color: #2d3748;
+    margin: 1.5rem 0 1rem 0;
+}
+
+.content-wrapper h1 {
+    font-size: 2rem;
+    border-bottom: 2px solid #667eea;
+    padding-bottom: 0.5rem;
+}
+
+.content-wrapper h2 {
+    font-size: 1.5rem;
+    color: #4a5568;
+}
+
+.content-wrapper h3 {
+    font-size: 1.25rem;
+    color: #718096;
+}
+
+.content-wrapper p {
+    margin-bottom: 1rem;
+    color: #4a5568;
+}
+
+.content-wrapper ul,
+.content-wrapper ol {
+    margin: 1rem 0;
+    padding-left: 2rem;
+}
+
+.content-wrapper li {
+    margin-bottom: 0.5rem;
+    color: #4a5568;
+}
+
+.content-wrapper a {
+    color: #667eea;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-bottom-color 0.3s ease;
+}
+
+.content-wrapper a:hover {
+    border-bottom-color: #667eea;
+}
+
 .logo {
     display: flex;
     align-items: center;

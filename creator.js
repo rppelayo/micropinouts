@@ -18,6 +18,10 @@ class PinoutCreator {
         this.imageScaleX = 300;
         this.imageScaleY = 300;
         this.pinNumberColor = '#2c3e50';
+        this.pageTitle = 'Custom Pinout Diagram';
+        this.metaDescription = '';
+        this.pageContent = '';
+        this.quill = null;
         
         this.pinTypes = {
             'power': { name: 'Power', color: '#e74c3c', class: 'pin-type-power' },
@@ -35,6 +39,7 @@ class PinoutCreator {
     
     init() {
         this.setupEventListeners();
+        this.initializeRichTextEditor();
         this.generateInitialPins();
         this.updatePreview();
     }
@@ -174,6 +179,41 @@ class PinoutCreator {
         document.getElementById('addPin').addEventListener('click', () => {
             this.addPin();
         });
+        
+        // SEO content
+        document.getElementById('pageTitle').addEventListener('input', (e) => {
+            this.pageTitle = e.target.value;
+        });
+        
+        document.getElementById('metaDescription').addEventListener('input', (e) => {
+            this.metaDescription = e.target.value;
+        });
+    }
+    
+    initializeRichTextEditor() {
+        // Initialize Quill editor
+        this.quill = new Quill('#richTextEditor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['link'],
+                    ['clean']
+                ]
+            },
+            placeholder: 'Write your pinout page content here...'
+        });
+        
+        // Listen for text changes
+        this.quill.on('text-change', () => {
+            this.pageContent = this.quill.root.innerHTML;
+        });
+        
+        // Set initial content
+        this.quill.root.innerHTML = '<p>This pinout diagram shows the complete pin configuration for the <strong>' + this.chipName + '</strong> microcontroller.</p><p>Use this diagram to understand pin functions, voltage levels, and connections for your projects.</p>';
+        this.pageContent = this.quill.root.innerHTML;
     }
     
     toggleBackgroundOptions() {
@@ -484,6 +524,9 @@ class PinoutCreator {
             imageScaleX: this.imageScaleX,
             imageScaleY: this.imageScaleY,
             pinNumberColor: this.pinNumberColor,
+            pageTitle: this.pageTitle,
+            metaDescription: this.metaDescription,
+            pageContent: this.pageContent,
             pins: this.pins
         };
         
@@ -508,7 +551,8 @@ class PinoutCreator {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${data.chipName} Pinout - MicroPinouts</title>
+    <title>${data.pageTitle || data.chipName + ' Pinout - MicroPinouts'}</title>
+    <meta name="description" content="${data.metaDescription || 'Complete pinout diagram for ' + data.chipName + ' microcontroller with detailed pin information and specifications.'}">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="pinout-styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -559,6 +603,15 @@ class PinoutCreator {
                         <button id="datasheetLink" class="btn btn-secondary">
                             <i class="fas fa-external-link-alt"></i> Chip Datasheet
                         </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Page Content -->
+            <div class="content-section">
+                <div class="container">
+                    <div class="content-wrapper">
+                        ${data.pageContent || ''}
                     </div>
                 </div>
             </div>

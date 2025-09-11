@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="pinout-styles.css">
     <link rel="stylesheet" href="creator-styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 </head>
 <body>
     <header class="header">
@@ -228,6 +229,26 @@
                         </button>
                     </div>
 
+                    <!-- SEO Content -->
+                    <div class="config-section">
+                        <h3>SEO Content</h3>
+                        <div class="form-group">
+                            <label for="pageTitle">Page Title:</label>
+                            <input type="text" id="pageTitle" placeholder="e.g., PIC16F84A Pinout Diagram - Complete Guide" value="Custom Pinout Diagram">
+                            <small class="form-help">SEO-friendly title for the generated page</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="metaDescription">Meta Description:</label>
+                            <textarea id="metaDescription" rows="3" placeholder="Brief description for search engines..."></textarea>
+                            <small class="form-help">Short description that appears in search results</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Page Content:</label>
+                            <div id="richTextEditor" style="height: 200px;"></div>
+                            <small class="form-help">Rich text content for the pinout page (introduction, features, etc.)</small>
+                        </div>
+                    </div>
+
                     <!-- Actions -->
                     <div class="config-section">
                         <h3>Actions</h3>
@@ -262,6 +283,7 @@
         </div>
     </footer>
 
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
     <script src="creator.js"></script>
 </body>
 </html>
