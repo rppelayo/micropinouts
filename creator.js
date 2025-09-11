@@ -72,7 +72,7 @@ class PinoutCreator {
         });
         
         // Action buttons
-        document.getElementById('previewPinout').addEventListener('click', () => {
+        document.getElementById('updatePreview').addEventListener('click', () => {
             this.updatePreview();
         });
         
@@ -207,7 +207,7 @@ class PinoutCreator {
     }
     
     updatePreview() {
-        const previewContainer = document.getElementById('previewPinout');
+        const previewContainer = document.getElementById('previewContainer');
         previewContainer.innerHTML = '';
         
         // Set CSS variables
