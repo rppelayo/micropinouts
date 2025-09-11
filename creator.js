@@ -4,6 +4,9 @@ class PinoutCreator {
     constructor() {
         this.pins = [];
         this.currentPinCount = 16;
+        this.leftPinCount = 8;
+        this.rightPinCount = 8;
+        this.symmetricPins = true;
         this.chipName = 'Custom Chip';
         this.boardHeight = 20; // in mm
         this.boardWidth = 50; // in mm
@@ -38,8 +41,31 @@ class PinoutCreator {
             this.updatePreview();
         });
         
+        document.getElementById('symmetricPins').addEventListener('change', (e) => {
+            this.symmetricPins = e.target.checked;
+            this.togglePinCountInputs();
+            this.generateInitialPins();
+            this.updatePreview();
+        });
+        
         document.getElementById('pinCount').addEventListener('change', (e) => {
             this.currentPinCount = parseInt(e.target.value);
+            if (this.symmetricPins) {
+                this.leftPinCount = Math.ceil(this.currentPinCount / 2);
+                this.rightPinCount = this.currentPinCount - this.leftPinCount;
+            }
+            this.generateInitialPins();
+            this.updatePreview();
+        });
+        
+        document.getElementById('leftPinCount').addEventListener('change', (e) => {
+            this.leftPinCount = parseInt(e.target.value);
+            this.generateInitialPins();
+            this.updatePreview();
+        });
+        
+        document.getElementById('rightPinCount').addEventListener('change', (e) => {
+            this.rightPinCount = parseInt(e.target.value);
             this.generateInitialPins();
             this.updatePreview();
         });
@@ -116,31 +142,69 @@ class PinoutCreator {
         }
     }
     
+    togglePinCountInputs() {
+        const totalPinGroup = document.getElementById('totalPinGroup');
+        const asymmetricPinGroup = document.getElementById('asymmetricPinGroup');
+        
+        if (this.symmetricPins) {
+            totalPinGroup.style.display = 'block';
+            asymmetricPinGroup.style.display = 'none';
+        } else {
+            totalPinGroup.style.display = 'none';
+            asymmetricPinGroup.style.display = 'block';
+        }
+    }
+    
     
     generateInitialPins() {
         this.pins = [];
-        const pinCount = this.currentPinCount;
-        const leftPinCount = Math.ceil(pinCount / 2);
-        const rightPinCount = pinCount - leftPinCount;
         
-        // Generate left pins (1 to leftPinCount)
-        for (let i = 1; i <= leftPinCount; i++) {
-            this.pins.push({
-                number: i,
-                name: `Pin${i}`,
-                type: 'gpio',
-                side: 'left'
-            });
-        }
-        
-        // Generate right pins (pinCount down to leftPinCount + 1) - reverse order
-        for (let i = pinCount; i > leftPinCount; i--) {
-            this.pins.push({
-                number: i,
-                name: `Pin${i}`,
-                type: 'gpio',
-                side: 'right'
-            });
+        if (this.symmetricPins) {
+            // Symmetric pins - use total pin count
+            const pinCount = this.currentPinCount;
+            const leftPinCount = Math.ceil(pinCount / 2);
+            const rightPinCount = pinCount - leftPinCount;
+            
+            // Generate left pins (1 to leftPinCount)
+            for (let i = 1; i <= leftPinCount; i++) {
+                this.pins.push({
+                    number: i,
+                    name: `Pin${i}`,
+                    type: 'gpio',
+                    side: 'left'
+                });
+            }
+            
+            // Generate right pins (pinCount down to leftPinCount + 1) - reverse order
+            for (let i = pinCount; i > leftPinCount; i--) {
+                this.pins.push({
+                    number: i,
+                    name: `Pin${i}`,
+                    type: 'gpio',
+                    side: 'right'
+                });
+            }
+        } else {
+            // Asymmetric pins - use individual left and right counts
+            // Generate left pins (1 to leftPinCount)
+            for (let i = 1; i <= this.leftPinCount; i++) {
+                this.pins.push({
+                    number: i,
+                    name: `Pin${i}`,
+                    type: 'gpio',
+                    side: 'left'
+                });
+            }
+            
+            // Generate right pins (leftPinCount + 1 to leftPinCount + rightPinCount)
+            for (let i = this.leftPinCount + 1; i <= this.leftPinCount + this.rightPinCount; i++) {
+                this.pins.push({
+                    number: i,
+                    name: `Pin${i}`,
+                    type: 'gpio',
+                    side: 'right'
+                });
+            }
         }
         
         this.renderPinList();
@@ -225,20 +289,23 @@ class PinoutCreator {
         const previewContainer = document.getElementById('previewContainer');
         previewContainer.innerHTML = '';
         
+        // Calculate total pin count
+        const totalPinCount = this.symmetricPins ? this.currentPinCount : (this.leftPinCount + this.rightPinCount);
+        
         // Calculate dynamic chip height based on pin count
         // Base height: 400px for up to 28 pins, then scale up
         let chipHeight;
-        if (this.currentPinCount <= 28) {
+        if (totalPinCount <= 28) {
             chipHeight = 400;
         } else {
             // Scale up: 400px + (pinCount - 28) * 15px
-            chipHeight = 400 + (this.currentPinCount - 28) * 15;
+            chipHeight = 400 + (totalPinCount - 28) * 15;
         }
         
         // Set CSS variables
-        previewContainer.style.setProperty('--pin-count', this.currentPinCount);
+        previewContainer.style.setProperty('--pin-count', totalPinCount);
         previewContainer.style.setProperty('--chip-height', `${chipHeight}px`);
-        previewContainer.style.setProperty('--pin-spacing', `${chipHeight / this.currentPinCount}px`);
+        previewContainer.style.setProperty('--pin-spacing', `${chipHeight / totalPinCount}px`);
         
         // Generate pinout structure
         this.generatePinoutStructure(previewContainer);
@@ -319,15 +386,16 @@ class PinoutCreator {
         const numbersContainer = document.createElement('div');
         numbersContainer.className = `pin-numbers-${side}`;
         
+        const totalPinCount = this.symmetricPins ? this.currentPinCount : (this.leftPinCount + this.rightPinCount);
+        
         pins.forEach((pin, index) => {
             const pinNum = document.createElement('div');
             pinNum.className = 'pin-num';
             pinNum.textContent = pin.number;
             
             // Calculate position based on the pin's position in the array
-            // Both left and right pins are now in the correct order
             const position = index + 1; // 1-based index
-            const percentage = ((position * 2 - 1) / this.currentPinCount) * 100;
+            const percentage = ((position * 2 - 1) / totalPinCount) * 100;
             pinNum.style.top = `${percentage}%`;
             
             numbersContainer.appendChild(pinNum);
@@ -338,9 +406,14 @@ class PinoutCreator {
     
     generatePinout() {
         // Create a new page with the generated pinout
+        const totalPinCount = this.symmetricPins ? this.currentPinCount : (this.leftPinCount + this.rightPinCount);
+        
         const pinoutData = {
             chipName: this.chipName,
-            pinCount: this.currentPinCount,
+            pinCount: totalPinCount,
+            leftPinCount: this.leftPinCount,
+            rightPinCount: this.rightPinCount,
+            symmetricPins: this.symmetricPins,
             boardHeight: this.boardHeight,
             boardWidth: this.boardWidth,
             backgroundType: this.backgroundType,
@@ -402,8 +475,8 @@ class PinoutCreator {
                             <span class="value">${data.boardWidth}mm × ${data.boardHeight}mm</span>
                         </div>
                         <div class="info-item">
-                            <span class="label">Pin Count:</span>
-                            <span class="value">${data.pinCount}</span>
+                            <span class="label">Pin Configuration:</span>
+                            <span class="value">${data.symmetricPins ? `${data.pinCount} pins (symmetric)` : `${data.leftPinCount}L + ${data.rightPinCount}R`}</span>
                         </div>
                     </div>
                 </div>

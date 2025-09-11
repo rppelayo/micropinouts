@@ -36,7 +36,14 @@
                         </div>
                         
                         <div class="form-group">
-                            <label for="pinCount">Pin Count:</label>
+                            <label>
+                                <input type="checkbox" id="symmetricPins" checked>
+                                Same pin count on both sides
+                            </label>
+                        </div>
+                        
+                        <div class="form-group" id="totalPinGroup">
+                            <label for="pinCount">Total Pin Count:</label>
                             <select id="pinCount">
                                 <option value="8">8 pins</option>
                                 <option value="14">14 pins</option>
@@ -61,6 +68,61 @@
                                 <option value="84">84 pins</option>
                                 <option value="100">100 pins</option>
                             </select>
+                        </div>
+                        
+                        <div class="form-group" id="asymmetricPinGroup" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-col">
+                                    <label for="leftPinCount">Left Side Pins:</label>
+                                    <select id="leftPinCount">
+                                        <option value="1">1 pin</option>
+                                        <option value="2">2 pins</option>
+                                        <option value="3">3 pins</option>
+                                        <option value="4">4 pins</option>
+                                        <option value="5">5 pins</option>
+                                        <option value="6">6 pins</option>
+                                        <option value="7">7 pins</option>
+                                        <option value="8">8 pins</option>
+                                        <option value="9">9 pins</option>
+                                        <option value="10">10 pins</option>
+                                        <option value="11">11 pins</option>
+                                        <option value="12">12 pins</option>
+                                        <option value="13">13 pins</option>
+                                        <option value="14">14 pins</option>
+                                        <option value="15">15 pins</option>
+                                        <option value="16">16 pins</option>
+                                        <option value="17">17 pins</option>
+                                        <option value="18">18 pins</option>
+                                        <option value="19">19 pins</option>
+                                        <option value="20">20 pins</option>
+                                    </select>
+                                </div>
+                                <div class="form-col">
+                                    <label for="rightPinCount">Right Side Pins:</label>
+                                    <select id="rightPinCount">
+                                        <option value="1">1 pin</option>
+                                        <option value="2">2 pins</option>
+                                        <option value="3">3 pins</option>
+                                        <option value="4">4 pins</option>
+                                        <option value="5">5 pins</option>
+                                        <option value="6">6 pins</option>
+                                        <option value="7">7 pins</option>
+                                        <option value="8">8 pins</option>
+                                        <option value="9">9 pins</option>
+                                        <option value="10">10 pins</option>
+                                        <option value="11">11 pins</option>
+                                        <option value="12">12 pins</option>
+                                        <option value="13">13 pins</option>
+                                        <option value="14">14 pins</option>
+                                        <option value="15">15 pins</option>
+                                        <option value="16">16 pins</option>
+                                        <option value="17">17 pins</option>
+                                        <option value="18">18 pins</option>
+                                        <option value="19">19 pins</option>
+                                        <option value="20">20 pins</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                         
                         <div class="form-group">
