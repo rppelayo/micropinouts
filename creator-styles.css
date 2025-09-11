@@ -1,10 +1,30 @@
 /* Pinout Creator Styles */
 
 .creator-layout {
-    display: grid;
-    grid-template-columns: 400px 1fr;
+    display: grid !important;
+    grid-template-columns: 400px 1fr !important;
     gap: 2rem;
     min-height: calc(100vh - 200px);
+    width: 100%;
+    align-items: start;
+}
+
+/* Flexbox fallback for older browsers */
+@supports not (display: grid) {
+    .creator-layout {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+    }
+    
+    .config-panel {
+        width: 400px;
+        flex-shrink: 0;
+    }
+    
+    .preview-panel {
+        flex: 1;
+    }
 }
 
 /* Configuration Panel */
@@ -16,6 +36,8 @@
     position: sticky;
     top: 2rem;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    grid-column: 1 !important;
+    grid-row: 1 !important;
 }
 
 .config-panel h2 {
@@ -199,6 +221,14 @@
     border-radius: 8px;
     padding: 1.5rem;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    height: fit-content;
+    position: sticky;
+    top: 2rem;
+    display: block;
+    float: none;
+    clear: none;
 }
 
 .preview-panel h2 {
