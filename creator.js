@@ -15,7 +15,7 @@ class PinoutCreator {
         this.backgroundImage = null;
         this.imageOffsetX = 0;
         this.imageOffsetY = 0;
-        this.imageScale = 100;
+        this.imageScale = 300;
         this.pinNumberColor = '#2c3e50';
         
         this.pinTypes = {
@@ -132,17 +132,17 @@ class PinoutCreator {
         });
         
         document.getElementById('imageScale').addEventListener('input', (e) => {
-            this.imageScale = parseInt(e.target.value) || 100;
+            this.imageScale = parseInt(e.target.value) || 300;
             this.updatePreview();
         });
         
         document.getElementById('resetImagePosition').addEventListener('click', () => {
             this.imageOffsetX = 0;
             this.imageOffsetY = 0;
-            this.imageScale = 100;
+            this.imageScale = 300;
             document.getElementById('imageOffsetX').value = 0;
             document.getElementById('imageOffsetY').value = 0;
-            document.getElementById('imageScale').value = 100;
+            document.getElementById('imageScale').value = 300;
             this.updatePreview();
         });
         
@@ -420,7 +420,7 @@ class PinoutCreator {
         // Apply background based on type
         if (this.backgroundType === 'image' && this.backgroundImage) {
             chipBody.style.backgroundImage = `url(${this.backgroundImage})`;
-            chipBody.style.backgroundSize = `${this.imageScale}%`;
+            chipBody.style.backgroundSize = `${this.imageScale}px auto`;
             chipBody.style.backgroundRepeat = 'no-repeat';
             chipBody.style.backgroundPosition = `calc(50% + ${this.imageOffsetX}px) calc(50% + ${this.imageOffsetY}px)`;
             chipBody.style.border = 'none';
@@ -632,7 +632,7 @@ class PinoutCreator {
             // Apply background
             if (pinoutData.backgroundType === 'image' && pinoutData.backgroundImage) {
                 chipBody.style.backgroundImage = \`url(\${pinoutData.backgroundImage})\`;
-                chipBody.style.backgroundSize = \`\${pinoutData.imageScale || 100}%\`;
+                chipBody.style.backgroundSize = \`\${pinoutData.imageScale || 100}px auto\`;
                 chipBody.style.backgroundRepeat = 'no-repeat';
                 chipBody.style.backgroundPosition = \`calc(50% + \${pinoutData.imageOffsetX || 0}px) calc(50% + \${pinoutData.imageOffsetY || 0}px)\`;
                 chipBody.style.border = 'none';
