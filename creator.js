@@ -750,10 +750,12 @@ class PinoutCreator {
         }
 
         .left-pins .pin-label {
+            right: 10px; /* Position closer to the gray pin rectangle */
             text-align: right;
         }
 
         .right-pins .pin-label {
+            left: 10px; /* Position closer to the gray pin rectangle */
             text-align: left;
         }
 
