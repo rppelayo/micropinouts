@@ -101,6 +101,10 @@
     background: #f39c12 !important;
 }
 
+.pwm {
+    background: #9f7aea !important;
+}
+
 /* Creator pin type classes - for SVG content */
 .pin-type-power { background: #e74c3c !important; color: white; }
 .pin-type-gnd { background: #2c3e50 !important; color: white; }
@@ -263,6 +267,11 @@
     color: #553c9a;
 }
 
+.function-tag.pwm {
+    background: #e9d8fd;
+    color: #553c9a;
+}
+
 /* ESP32 specific styles - using systematic approach */
 .esp32-pinout {
     --pin-count: 38; /* 38 pins for ESP32 */
@@ -271,8 +280,20 @@
     --pin-spacing: calc(var(--pin-area-height) / var(--pin-count));
 }
 
+/* Arduino Pro Mini specific styles */
+.arduino-pro-mini-pinout {
+    --pin-count: 32; /* 32 pins for Arduino Pro Mini */
+    --chip-height: 400px; /* Total SVG height */
+    --pin-area-height: 300px; /* Actual pin area height */
+    --pin-spacing: calc(var(--pin-area-height) / var(--pin-count));
+}
+
 .esp32-pinout .pin-column {
     height: 600px; /* Match the chip height */
+}
+
+.arduino-pro-mini-pinout .pin-column {
+    height: 400px; /* Match the chip height */
 }
 
 .esp32-pinout .chip-body {
@@ -284,6 +305,140 @@
     background-position: center 3px;
     border: none; /* Hide gray outline when image is present */
     box-shadow: none; /* Remove any box shadow */
+}
+
+/* Arduino Pro Mini chip body with SVG */
+.arduino-pro-mini-pinout .chip-body {
+    height: 400px;
+    width: 200px;
+    background: transparent; /* Remove gray background for SVG */
+    border: none; /* Hide gray outline when SVG is present */
+    box-shadow: none; /* Remove any box shadow */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.arduino-pro-mini-pinout .svg-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.arduino-pro-mini-pinout .arduino-svg {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* SVG-based pinout styles */
+.svg-pinout-container {
+    position: relative;
+    width: 100%;
+    height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.svg-pin {
+    position: absolute;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.svg-pin .pin-label {
+    background: #4a5568;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-align: center;
+    min-width: 40px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.svg-pin:hover .pin-label {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    transform: scale(1.1);
+}
+
+.svg-pin.selected .pin-label {
+    box-shadow: 0 0 0 2px #ffffff;
+    filter: brightness(1.2);
+    color: #000000;
+}
+
+/* Connecting lines styles */
+.connecting-line {
+    position: absolute;
+    background-color: #666;
+    height: 2px;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+    z-index: 5;
+}
+
+.connecting-line:hover {
+    opacity: 1;
+    background-color: #333;
+    height: 3px;
+}
+
+/* SVG pin labels positioned outside the SVG */
+.svg-pin-label {
+    position: absolute;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 15;
+}
+
+.svg-pin-label .pin-label {
+    background: #4a5568;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-align: center;
+    min-width: 40px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.svg-pin-label:hover .pin-label {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    transform: scale(1.1);
+}
+
+.svg-pin-label.selected .pin-label {
+    box-shadow: 0 0 0 2px #ffffff;
+    filter: brightness(1.2);
+    color: #000000;
+}
+
+/* Enhanced SVG container for better line visibility */
+.svg-pinout-container {
+    position: relative;
+    width: 100%;
+    height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    overflow: visible; /* Allow lines to extend outside */
 }
 
 .esp32-pinout .pin-label {
