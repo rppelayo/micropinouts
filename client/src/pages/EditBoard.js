@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Save, Plus, Trash2, Edit3, X } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, Edit3, X, Move, Eye, EyeOff } from 'lucide-react';
+import SVGViewer from '../components/SVGViewer';
 import { boardsAPI, pinGroupsAPI } from '../services/api';
 
 const EditBoardContainer = styled.div`
@@ -462,6 +463,69 @@ const BoardInfoButton = styled.button`
   }
 `;
 
+const EditModeToggle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+`;
+
+const ToggleButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
+  background: ${props => props.active ? '#3b82f6' : 'white'};
+  color: ${props => props.active ? 'white' : '#374151'};
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: ${props => props.active ? '#2563eb' : '#f9fafb'};
+  }
+`;
+
+
+const PinNameInput = styled.input`
+  background: transparent;
+  border: none;
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 16px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  min-width: 60px;
+  
+  &:focus {
+    outline: none;
+    background: white;
+    border: 1px solid #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  }
+`;
+
+const PinNameDisplay = styled.div`
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+  
+  &:hover {
+    background: #f1f5f9;
+  }
+`;
+
 
 const EditBoard = () => {
   const { id } = useParams();
@@ -475,6 +539,10 @@ const EditBoard = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [editingBoard, setEditingBoard] = useState(false);
+  const [editMode, setEditMode] = useState('view'); // 'view', 'name'
+  const [editingPinName, setEditingPinName] = useState(null);
+  const [pinPositions, setPinPositions] = useState({});
+  const svgContainerRef = useRef(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -519,6 +587,54 @@ const EditBoard = () => {
     fetchData();
   }, [id]);
 
+  // Initialize pin positions from database
+  useEffect(() => {
+    if (pins && pins.length > 0) {
+      const initialPositions = {};
+      pins.forEach(pin => {
+        if (pin.position_x !== null && pin.position_x !== undefined && 
+            pin.position_y !== null && pin.position_y !== undefined) {
+          initialPositions[pin.id] = {
+            x: pin.position_x,
+            y: pin.position_y
+          };
+        }
+      });
+      setPinPositions(initialPositions);
+    }
+  }, [pins]);
+
+  // Apply pin positions to SVG elements when they're available
+  useEffect(() => {
+    if (pins && pins.length > 0 && Object.keys(pinPositions).length > 0) {
+      // Small delay to ensure SVG is rendered
+      const timer = setTimeout(() => {
+        pins.forEach(pin => {
+          if (pin.svg_id && pinPositions[pin.id]) {
+            const svgElement = document.getElementById(pin.svg_id);
+            if (svgElement) {
+              const pos = pinPositions[pin.id];
+              // For board 518, don't apply negative coordinates on initial load
+              // Only apply if coordinates are positive or if user has manually changed them
+              const isBoard518 = parseInt(id) === 518;
+              const hasUserChanges = pinPositions[pin.id] && (
+                pinPositions[pin.id].x !== pin.position_x || 
+                pinPositions[pin.id].y !== pin.position_y
+              );
+              
+              if (!isBoard518 || pos.x >= 0 || pos.y >= 0 || hasUserChanges) {
+                svgElement.setAttribute('x', pos.x.toString());
+                svgElement.setAttribute('y', pos.y.toString());
+              }
+            }
+          }
+        });
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [pins, pinPositions, id]);
+
   const handlePinUpdate = (pinId, field, value) => {
     setPins(prevPins => 
       prevPins.map(pin => 
@@ -527,6 +643,43 @@ const EditBoard = () => {
           : pin
       )
     );
+  };
+
+  const handlePinNameEdit = (pinId, newName) => {
+    setPins(prevPins => 
+      prevPins.map(pin => 
+        pin.id === pinId 
+          ? { ...pin, pin_name: newName }
+          : pin
+      )
+    );
+    setEditingPinName(null);
+  };
+
+
+  const handlePinPositionChange = (pinId, field, value) => {
+    const numValue = parseFloat(value) || 0;
+    setPinPositions(prev => ({
+      ...prev,
+      [pinId]: {
+        ...prev[pinId],
+        [field]: numValue
+      }
+    }));
+
+    // Update the SVG element position in real-time
+    const pin = pins.find(p => p.id === pinId);
+    if (pin && pin.svg_id) {
+      const svgElement = document.getElementById(pin.svg_id);
+      if (svgElement) {
+        const currentPos = pinPositions[pinId] || { x: pin.position_x || 0, y: pin.position_y || 0 };
+        const newPos = { ...currentPos, [field]: numValue };
+        
+        // Always update the position when user types in the fields
+        svgElement.setAttribute('x', newPos.x.toString());
+        svgElement.setAttribute('y', newPos.y.toString());
+      }
+    }
   };
 
   const handleBoardUpdate = (field, value) => {
@@ -588,6 +741,7 @@ const EditBoard = () => {
       };
 
       for (const pin of pinsToUpdate) {
+        const position = pinPositions[pin.id];
         await fetch(`/api/admin/pins/${pin.id}`, {
           method: 'PUT',
           headers,
@@ -598,7 +752,9 @@ const EditBoard = () => {
             alternate_functions: pin.alternate_functions,
             description: pin.description,
             voltage_range: pin.voltage_range,
-            current_limit: pin.current_limit
+            current_limit: pin.current_limit,
+            position_x: position ? position.x : pin.position_x,
+            position_y: position ? position.y : pin.position_y
           })
         });
       }
@@ -819,15 +975,35 @@ const EditBoard = () => {
       <ContentGrid>
         <BoardPreview>
           <PreviewTitle>Board Preview</PreviewTitle>
-          <SVGContainer
-            onClick={handleSVGPinClick}
-            dangerouslySetInnerHTML={{
-              __html: board.svg_content?.replace(
-                /<svg([^>]*)>/i,
-                '<svg$1 style="width: 100%; height: 100%; max-width: 100%; max-height: 100%;">'
-              ) || '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #64748b;">No SVG content available</div>'
-            }}
-          />
+          
+          <EditModeToggle>
+            <ToggleButton
+              active={editMode === 'view'}
+              onClick={() => setEditMode('view')}
+            >
+              <Eye size={16} />
+              View Mode
+            </ToggleButton>
+            <ToggleButton
+              active={editMode === 'name'}
+              onClick={() => setEditMode('name')}
+            >
+              <Edit3 size={16} />
+              Edit Names
+            </ToggleButton>
+          </EditModeToggle>
+
+          <div style={{ position: 'relative' }} ref={svgContainerRef}>
+            <SVGViewer
+              svgContent={board?.svg_content}
+              onPinClick={handleSVGPinClick}
+              initialZoom={1}
+              minZoom={0.2}
+              maxZoom={3}
+              enablePan={true}
+              enableZoom={true}
+            />
+          </div>
         </BoardPreview>
 
         <div>
@@ -849,12 +1025,49 @@ const EditBoard = () => {
                 {(pins || []).length} pins
               </span>
             </EditorTitle>
+            
+            <div style={{
+              background: '#f0f9ff',
+              border: '1px solid #0ea5e9',
+              borderRadius: '8px',
+              padding: '12px',
+              marginBottom: '20px',
+              fontSize: '14px',
+              color: '#0c4a6e'
+            }}>
+              <strong>💡 Pin Positioning:</strong> Use the X and Y position fields to manually position pins. 
+              Changes update in real-time on the board preview. 
+              Click on pins in the board preview to scroll to their settings. 
+              Coordinates are in SVG units (typically 0-200 range).
+            </div>
 
             <PinList>
               {(pins || []).map(pin => (
                 <PinItem key={pin.id} id={`pin-${pin.id}`}>
                   <PinHeader>
-                    <PinName>{pin.pin_name || `Pin ${pin.pin_number}`}</PinName>
+                    {editMode === 'name' && editingPinName === pin.id ? (
+                      <PinNameInput
+                        value={pin.pin_name || ''}
+                        onChange={(e) => handlePinUpdate(pin.id, 'pin_name', e.target.value)}
+                        onBlur={() => setEditingPinName(null)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            setEditingPinName(null);
+                          }
+                        }}
+                        autoFocus
+                      />
+                    ) : (
+                      <PinNameDisplay
+                        onClick={() => {
+                          if (editMode === 'name') {
+                            setEditingPinName(pin.id);
+                          }
+                        }}
+                      >
+                        {pin.pin_name || `Pin ${pin.pin_number}`}
+                      </PinNameDisplay>
+                    )}
                     <PinNumber>#{pin.pin_number}</PinNumber>
                   </PinHeader>
                   
@@ -916,6 +1129,30 @@ const EditBoard = () => {
                         value={pin.description || ''}
                         onChange={(e) => handlePinUpdate(pin.id, 'description', e.target.value)}
                         placeholder="Additional pin information..."
+                      />
+                    </FormGroup>
+
+                    <FormGroup>
+                      <Label>X Position</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        value={pinPositions[pin.id]?.x ?? pin.position_x ?? ''}
+                        onChange={(e) => handlePinPositionChange(pin.id, 'x', e.target.value)}
+                        placeholder="X coordinate"
+                        title="SVG X coordinate for pin position"
+                      />
+                    </FormGroup>
+
+                    <FormGroup>
+                      <Label>Y Position</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        value={pinPositions[pin.id]?.y ?? pin.position_y ?? ''}
+                        onChange={(e) => handlePinPositionChange(pin.id, 'y', e.target.value)}
+                        placeholder="Y coordinate"
+                        title="SVG Y coordinate for pin position"
                       />
                     </FormGroup>
                   </PinDetails>

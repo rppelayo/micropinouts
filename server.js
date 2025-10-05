@@ -247,11 +247,15 @@ app.get('/api/boards', (req, res) => {
   });
 });
 
-// Get board by ID (only published for regular users)
+// Get board by ID or slug (only published for regular users)
 app.get('/api/boards/:id', (req, res) => {
-  const boardId = req.params.id;
+  const identifier = req.params.id;
   
-  db.get("SELECT * FROM boards WHERE id = ? AND published = 1", [boardId], (err, board) => {
+  // Check if identifier is a number (ID) or string (slug)
+  const isNumeric = /^\d+$/.test(identifier);
+  const whereClause = isNumeric ? "id = ?" : "slug = ?";
+  
+  db.get(`SELECT * FROM boards WHERE ${whereClause} AND published = 1`, [identifier], (err, board) => {
     if (err) {
       res.status(500).json({ error: err.message });
       return;
@@ -266,19 +270,49 @@ app.get('/api/boards/:id', (req, res) => {
 
 // Get pins for a board
 app.get('/api/boards/:id/pins', (req, res) => {
-  const boardId = req.params.id;
+  const identifier = req.params.id;
   
-  db.all(`SELECT p.*, pg.name as group_name, pg.color as group_color 
-          FROM pins p 
-          LEFT JOIN pin_groups pg ON p.pin_group_id = pg.id 
-          WHERE p.board_id = ? 
-          ORDER BY CAST(p.pin_number AS INTEGER)`, [boardId], (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.json(rows);
-  });
+  // Check if identifier is a number (ID) or string (slug)
+  const isNumeric = /^\d+$/.test(identifier);
+  
+  if (isNumeric) {
+    // Direct ID lookup
+    db.all(`SELECT p.*, pg.name as group_name, pg.color as group_color 
+            FROM pins p 
+            LEFT JOIN pin_groups pg ON p.pin_group_id = pg.id 
+            WHERE p.board_id = ? 
+            ORDER BY CAST(p.pin_number AS INTEGER)`, [identifier], (err, rows) => {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      res.json(rows);
+    });
+  } else {
+    // Slug lookup - first get board ID, then get pins
+    db.get("SELECT id FROM boards WHERE slug = ? AND published = 1", [identifier], (err, board) => {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      if (!board) {
+        res.status(404).json({ error: 'Board not found' });
+        return;
+      }
+      
+      db.all(`SELECT p.*, pg.name as group_name, pg.color as group_color 
+              FROM pins p 
+              LEFT JOIN pin_groups pg ON p.pin_group_id = pg.id 
+              WHERE p.board_id = ? 
+              ORDER BY CAST(p.pin_number AS INTEGER)`, [board.id], (err, rows) => {
+        if (err) {
+          res.status(500).json({ error: err.message });
+          return;
+        }
+        res.json(rows);
+      });
+    });
+  }
 });
 
 // Get all pin groups

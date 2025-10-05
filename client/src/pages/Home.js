@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
-import { Cpu, Zap, Wifi, Thermometer } from 'lucide-react';
 import { boardsAPI } from '../services/api';
+import SVGThumbnail from '../components/SVGThumbnail';
 
 const HomeContainer = styled.div`
   padding: 40px 0;
@@ -583,12 +583,6 @@ const Home = () => {
     setCurrentPage(1);
   }, [searchTerm, activeFilter]);
 
-  const getBoardIcon = (boardName) => {
-    if (boardName.toLowerCase().includes('arduino')) return <Cpu size={24} />;
-    if (boardName.toLowerCase().includes('esp')) return <Wifi size={24} />;
-    if (boardName.toLowerCase().includes('raspberry')) return <Zap size={24} />;
-    return <Thermometer size={24} />;
-  };
 
   if (loading) {
     return (
@@ -681,7 +675,10 @@ const Home = () => {
               >
                 <CardHeader>
                   <CardTitle>
-                    {getBoardIcon(board.name)}
+                    <SVGThumbnail 
+                      svgContent={board.svg_content} 
+                      boardName={board.name}
+                    />
                     {board.name}
                   </CardTitle>
                   <CardBadge>{board.package_type}</CardBadge>
@@ -705,7 +702,7 @@ const Home = () => {
                 </CardFeatures>
                 
                 <CardFooter>
-                  <Link to={`/board/${board.id}`} className="btn btn-primary">
+                  <Link to={`/board/${board.slug || board.id}`} className="btn btn-primary">
                     View Pinout
                   </Link>
                 </CardFooter>

@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Filter, Info, Zap, Wifi, Cpu, Edit3 } from 'lucide-react';
 import { boardsAPI, pinGroupsAPI } from '../services/api';
+import SVGViewer from '../components/SVGViewer';
 
 const BoardDetailContainer = styled.div`
   padding: 40px 0;
@@ -697,29 +698,15 @@ const BoardDetail = () => {
               </FilterSection>
 
               <PinoutDiagram>
-                {/* Breadboard SVG Background */}
-                {board?.svg_content && (
-                  <div 
-                    style={{ 
-                      position: 'absolute', 
-                      top: 0, 
-                      left: 0, 
-                      width: '100%', 
-                      height: '100%',
-                      zIndex: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                    onClick={handleSVGPinClick}
-                    dangerouslySetInnerHTML={{ 
-                      __html: board.svg_content.replace(
-                        /<svg([^>]*)>/i, 
-                        '<svg$1 style="width: 100%; height: 100%; max-width: 100%; max-height: 100%;">'
-                      )
-                    }}
-                  />
-                )}
+                <SVGViewer
+                  svgContent={board?.svg_content}
+                  onPinClick={handleSVGPinClick}
+                  initialZoom={1}
+                  minZoom={0.2}
+                  maxZoom={3}
+                  enablePan={true}
+                  enableZoom={true}
+                />
               </PinoutDiagram>
             </PinoutSection>
 

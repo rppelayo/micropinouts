@@ -477,12 +477,16 @@ router.post('/boards/from-fritzing', verifyAdminToken, async (req, res) => {
 
 // Get single board by ID
 router.get('/boards/:id', verifyAdminToken, (req, res) => {
-  const boardId = req.params.id;
+  const identifier = req.params.id;
   const db = new sqlite3.Database('./database.sqlite');
   
+  // Check if identifier is a number (ID) or string (slug)
+  const isNumeric = /^\d+$/.test(identifier);
+  const whereClause = isNumeric ? "id = ?" : "slug = ?";
+  
   db.get(`
-    SELECT * FROM boards WHERE id = ?
-  `, [boardId], (err, row) => {
+    SELECT * FROM boards WHERE ${whereClause}
+  `, [identifier], (err, row) => {
     if (err) {
       console.error('Error fetching board:', err);
       res.status(500).json({ error: 'Failed to fetch board' });
@@ -503,25 +507,149 @@ router.get('/boards/:id', verifyAdminToken, (req, res) => {
 
 // Get board pins for editing
 router.get('/boards/:id/pins', verifyAdminToken, (req, res) => {
-  const boardId = req.params.id;
+  const identifier = req.params.id;
   const db = new sqlite3.Database('./database.sqlite');
   
-  db.all(`
-    SELECT p.*, pg.name as group_name, pg.color as group_color
-    FROM pins p
-    LEFT JOIN pin_groups pg ON p.pin_group_id = pg.id
-    WHERE p.board_id = ?
-    ORDER BY CAST(p.pin_number AS INTEGER)
-  `, [boardId], (err, rows) => {
-    if (err) {
-      console.error('Error fetching pins:', err);
-      res.status(500).json({ error: 'Failed to fetch pins' });
-    } else {
-      res.json(rows);
-    }
-    db.close();
-  });
+  // Check if identifier is a number (ID) or string (slug)
+  const isNumeric = /^\d+$/.test(identifier);
+  
+  if (isNumeric) {
+    // Direct ID lookup
+    db.all(`
+      SELECT p.*, pg.name as group_name, pg.color as group_color
+      FROM pins p
+      LEFT JOIN pin_groups pg ON p.pin_group_id = pg.id
+      WHERE p.board_id = ?
+      ORDER BY CAST(p.pin_number AS INTEGER)
+    `, [identifier], (err, rows) => {
+      if (err) {
+        console.error('Error fetching pins:', err);
+        res.status(500).json({ error: 'Failed to fetch pins' });
+      } else {
+        res.json(rows);
+      }
+      db.close();
+    });
+  } else {
+    // Slug lookup - first get board ID, then get pins
+    db.get("SELECT id FROM boards WHERE slug = ?", [identifier], (err, board) => {
+      if (err) {
+        console.error('Error fetching board:', err);
+        res.status(500).json({ error: 'Failed to fetch board' });
+        db.close();
+        return;
+      }
+      if (!board) {
+        res.status(404).json({ error: 'Board not found' });
+        db.close();
+        return;
+      }
+      
+      db.all(`
+        SELECT p.*, pg.name as group_name, pg.color as group_color
+        FROM pins p
+        LEFT JOIN pin_groups pg ON p.pin_group_id = pg.id
+        WHERE p.board_id = ?
+        ORDER BY CAST(p.pin_number AS INTEGER)
+      `, [board.id], (err, rows) => {
+        if (err) {
+          console.error('Error fetching pins:', err);
+          res.status(500).json({ error: 'Failed to fetch pins' });
+        } else {
+          res.json(rows);
+        }
+        db.close();
+      });
+    });
+  }
 });
+
+// Function to update SVG content with current pin group information
+function updateBoardSVGContent(boardId, db) {
+  return new Promise((resolve, reject) => {
+    // Get board SVG content
+    db.get('SELECT svg_content FROM boards WHERE id = ?', [boardId], (err, board) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      
+      if (!board || !board.svg_content) {
+        resolve(); // No SVG content to update
+        return;
+      }
+      
+      // Get all pins with their group information
+      db.all(`
+        SELECT p.*, pg.name as group_name, pg.color as group_color
+        FROM pins p
+        LEFT JOIN pin_groups pg ON p.pin_group_id = pg.id
+        WHERE p.board_id = ?
+      `, [boardId], (err, pins) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        
+        try {
+          // Parse the SVG
+          const { DOMParser, XMLSerializer } = require('xmldom');
+          const parser = new DOMParser();
+          const serializer = new XMLSerializer();
+          const svgDoc = parser.parseFromString(board.svg_content, 'image/svg+xml');
+          
+          // Update pin colors and positions based on current data
+          pins.forEach(pin => {
+            if (pin.svg_id) {
+              const elem = svgDoc.getElementById(pin.svg_id);
+              if (elem) {
+                // Update the group class
+                const groupName = pin.group_name || 'Other';
+                const groupColor = pin.group_color || '#64748b';
+                
+                elem.setAttribute('class', `pin-hole group-${groupName.toLowerCase()}`);
+                elem.setAttribute('data-group', groupName);
+                elem.setAttribute('data-group-color', groupColor);
+                elem.setAttribute('stroke', groupColor);
+                
+                // Update pin position if available
+                if (pin.position_x !== null && pin.position_x !== undefined) {
+                  elem.setAttribute('x', pin.position_x.toString());
+                }
+                if (pin.position_y !== null && pin.position_y !== undefined) {
+                  elem.setAttribute('y', pin.position_y.toString());
+                }
+                
+                // Update pin name in data attributes
+                elem.setAttribute('data-pin', pin.pin_name);
+                
+                // Update tooltip
+                const title = elem.getElementsByTagName('title')[0];
+                if (title) {
+                  title.textContent = `${pin.pin_name} (${groupName})`;
+                }
+              }
+            }
+          });
+          
+          // Serialize back to string
+          const updatedSVG = serializer.serializeToString(svgDoc);
+          
+          // Update the board's SVG content
+          db.run('UPDATE boards SET svg_content = ? WHERE id = ?', [updatedSVG, boardId], (err) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve();
+            }
+          });
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+  });
+}
 
 // Update pin
 router.put('/pins/:id', verifyAdminToken, (req, res) => {
@@ -550,12 +678,34 @@ router.put('/pins/:id', verifyAdminToken, (req, res) => {
     if (err) {
       console.error('Error updating pin:', err);
       res.status(500).json({ error: 'Failed to update pin' });
+      db.close();
     } else if (this.changes === 0) {
       res.status(404).json({ error: 'Pin not found' });
+      db.close();
     } else {
-      res.json({ message: 'Pin updated successfully' });
+      // Get the board_id for this pin to update SVG content
+      db.get('SELECT board_id FROM pins WHERE id = ?', [pinId], (err, pin) => {
+        if (err) {
+          console.error('Error getting board_id:', err);
+          res.json({ message: 'Pin updated successfully (SVG not updated)' });
+          db.close();
+          return;
+        }
+        
+        // Update SVG content with new pin group information
+        updateBoardSVGContent(pin.board_id, db)
+          .then(() => {
+            console.log('SVG content updated successfully for board', pin.board_id);
+            res.json({ message: 'Pin updated successfully' });
+            db.close();
+          })
+          .catch((svgErr) => {
+            console.error('Error updating SVG content:', svgErr);
+            res.json({ message: 'Pin updated successfully (SVG update failed)' });
+            db.close();
+          });
+      });
     }
-    db.close();
   });
 });
 
@@ -575,6 +725,23 @@ router.delete('/pins/:id', verifyAdminToken, (req, res) => {
     }
     db.close();
   });
+});
+
+// Update board SVG content (manual trigger)
+router.post('/boards/:id/update-svg', verifyAdminToken, (req, res) => {
+  const boardId = req.params.id;
+  const db = new sqlite3.Database('./database.sqlite');
+  
+  updateBoardSVGContent(boardId, db)
+    .then(() => {
+      res.json({ message: 'SVG content updated successfully' });
+      db.close();
+    })
+    .catch((err) => {
+      console.error('Error updating SVG content:', err);
+      res.status(500).json({ error: 'Failed to update SVG content' });
+      db.close();
+    });
 });
 
 // Get all pin groups

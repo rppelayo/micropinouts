@@ -412,6 +412,15 @@ const ActionButton = styled.button`
       background: #fffbeb;
     }
   }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    
+    &:hover {
+      background: white;
+    }
+  }
 `;
 
 const UploadArea = styled.div`
@@ -749,6 +758,7 @@ const Admin = () => {
   // Cache state
   const [boardsCache, setBoardsCache] = useState(new Map());
   const [lastFetchTime, setLastFetchTime] = useState(0);
+  const [loadingOperations, setLoadingOperations] = useState(new Set());
   const [showModal, setShowModal] = useState(false);
   const [editingBoard, setEditingBoard] = useState(null);
   const [uploadedFile, setUploadedFile] = useState(null);
@@ -874,6 +884,13 @@ const Admin = () => {
     fetchBoards();
   }, []);
 
+  // Refetch boards when switching to boards tab
+  useEffect(() => {
+    if (activeTab === 'boards' && isAuthenticated) {
+      fetchBoards();
+    }
+  }, [activeTab, isAuthenticated]);
+
   // Client-side filtering with pagination
   useEffect(() => {
     let filtered = boards;
@@ -881,9 +898,9 @@ const Admin = () => {
     // Apply search filter
     if (searchTerm) {
       filtered = filtered.filter(board =>
-        board.chip_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        board.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        board.description?.toLowerCase().includes(searchTerm.toLowerCase())
+        board.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        board.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        board.manufacturer?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -892,9 +909,9 @@ const Admin = () => {
       filtered = filtered.filter(board => {
         switch (statusFilter) {
           case 'published':
-            return board.is_published === 1;
+            return board.published === 1;
           case 'draft':
-            return board.is_published === 0;
+            return board.published === 0;
           default:
             return true;
         }
@@ -1065,6 +1082,22 @@ const Admin = () => {
       return;
     }
 
+    // Prevent double-clicks
+    if (loadingOperations.has(`delete-${boardId}`)) {
+      return;
+    }
+
+    console.log('Deleting board:', boardId);
+    
+    // Add to loading operations
+    setLoadingOperations(prev => new Set(prev).add(`delete-${boardId}`));
+    
+    // Store the board to be deleted for potential rollback
+    const boardToDelete = boards.find(board => board.id === boardId);
+    
+    // Optimistically remove the board from the UI
+    setBoards(prevBoards => prevBoards.filter(board => board.id !== boardId));
+
     try {
       const response = await fetch(`/api/admin/boards/${boardId}`, {
         method: 'DELETE',
@@ -1073,20 +1106,89 @@ const Admin = () => {
         }
       });
 
+      console.log('Delete response status:', response.status);
+
       if (response.ok) {
         setSuccess('Board deleted successfully!');
-        // Clear cache and refresh data
+        console.log('Board deleted successfully, refreshing data...');
+        // Clear cache and refresh data to ensure consistency
         setBoardsCache(new Map());
-        await fetchBoards();
+        setLastFetchTime(0); // Force fresh fetch
+        
+        // Force a fresh fetch by calling the API directly
+        try {
+          const refreshResponse = await fetch('/api/admin/boards', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (refreshResponse.ok) {
+            const refreshData = await refreshResponse.json();
+            const boardsData = Array.isArray(refreshData) ? refreshData : (refreshData.boards || refreshData.pinouts || []);
+            console.log('Fresh data fetched:', boardsData.length, 'boards');
+            setBoards(boardsData);
+            setTotalBoards(boardsData.length);
+            setBoardsCache(prev => new Map(prev).set('all-boards', boardsData));
+            setLastFetchTime(Date.now());
+          }
+        } catch (refreshError) {
+          console.error('Error refreshing data:', refreshError);
+          await fetchBoards(); // Fallback to original method
+        }
+        
+        console.log('Data refreshed after delete');
       } else {
+        const errorData = await response.json();
+        console.error('Delete failed:', errorData);
         setError('Failed to delete board');
+        // Revert optimistic update on error
+        if (boardToDelete) {
+          setBoards(prevBoards => [...prevBoards, boardToDelete]);
+        }
       }
     } catch (error) {
+      console.error('Delete error:', error);
       setError('Failed to delete board. Please try again.');
+      // Revert optimistic update on error
+      if (boardToDelete) {
+        setBoards(prevBoards => [...prevBoards, boardToDelete]);
+      }
+    } finally {
+      // Remove from loading operations
+      setLoadingOperations(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(`delete-${boardId}`);
+        return newSet;
+      });
     }
   };
 
   const handleTogglePublish = async (boardId, published) => {
+    // Prevent double-clicks
+    if (loadingOperations.has(`publish-${boardId}`)) {
+      return;
+    }
+
+    console.log('Toggle publish:', boardId, 'to', published);
+    
+    // Find the original board to get the current state
+    const originalBoard = boards.find(board => board.id === boardId);
+    if (!originalBoard) {
+      console.error('Board not found:', boardId);
+      return;
+    }
+
+    // Add to loading operations
+    setLoadingOperations(prev => new Set(prev).add(`publish-${boardId}`));
+
+    // Optimistically update the UI
+    setBoards(prevBoards => 
+      prevBoards.map(board => 
+        board.id === boardId ? { ...board, published: published ? 1 : 0 } : board
+      )
+    );
+
     try {
       const response = await fetch(`/api/admin/boards/${boardId}/publish`, {
         method: 'PUT',
@@ -1097,16 +1199,64 @@ const Admin = () => {
         body: JSON.stringify({ published })
       });
 
+      console.log('Publish response status:', response.status);
+
       if (response.ok) {
         setSuccess(`Board ${published ? 'published' : 'unpublished'} successfully!`);
-        // Clear cache and refresh data
+        // Clear cache and refresh data to ensure consistency
         setBoardsCache(new Map());
-        await fetchBoards();
+        setLastFetchTime(0); // Force fresh fetch
+        
+        // Force a fresh fetch by calling the API directly
+        try {
+          const refreshResponse = await fetch('/api/admin/boards', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (refreshResponse.ok) {
+            const refreshData = await refreshResponse.json();
+            const boardsData = Array.isArray(refreshData) ? refreshData : (refreshData.boards || refreshData.pinouts || []);
+            console.log('Fresh data fetched after publish:', boardsData.length, 'boards');
+            setBoards(boardsData);
+            setTotalBoards(boardsData.length);
+            setBoardsCache(prev => new Map(prev).set('all-boards', boardsData));
+            setLastFetchTime(Date.now());
+          }
+        } catch (refreshError) {
+          console.error('Error refreshing data after publish:', refreshError);
+          await fetchBoards(); // Fallback to original method
+        }
+        
+        console.log('Data refreshed after publish toggle');
       } else {
+        const errorData = await response.json();
+        console.error('Publish toggle failed:', errorData);
         setError(`Failed to ${published ? 'publish' : 'unpublish'} board`);
+        // Revert optimistic update on error
+        setBoards(prevBoards => 
+          prevBoards.map(board => 
+            board.id === boardId ? { ...board, published: originalBoard.published } : board
+          )
+        );
       }
     } catch (error) {
+      console.error('Publish toggle error:', error);
       setError(`Failed to ${published ? 'publish' : 'unpublish'} board. Please try again.`);
+      // Revert optimistic update on error
+      setBoards(prevBoards => 
+        prevBoards.map(board => 
+          board.id === boardId ? { ...board, published: originalBoard.published } : board
+        )
+      );
+    } finally {
+      // Remove from loading operations
+      setLoadingOperations(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(`publish-${boardId}`);
+        return newSet;
+      });
     }
   };
 
@@ -1166,7 +1316,11 @@ const Admin = () => {
         <TabsContainer>
           <Tab 
             $active={activeTab === 'boards'} 
-            onClick={() => setActiveTab('boards')}
+            onClick={() => {
+              setActiveTab('boards');
+              // Clear cache to ensure fresh data
+              setBoardsCache(new Map());
+            }}
           >
             <Cpu size={20} />
             Boards
@@ -1255,14 +1409,14 @@ const Admin = () => {
                     <BoardActions>
                       <ActionButton 
                         className="edit"
-                        onClick={() => navigate(`/admin/boards/${board.id}/edit`)}
+                        onClick={() => navigate(`/admin/boards/${board.slug || board.id}/edit`)}
                       >
                         <Edit size={16} />
                         Edit
                       </ActionButton>
                       <ActionButton 
                         className="view"
-                        onClick={() => navigate(`/board/${board.id}`)}
+                        onClick={() => navigate(`/board/${board.slug || board.id}`)}
                       >
                         <Eye size={16} />
                         View
@@ -1270,16 +1424,18 @@ const Admin = () => {
                       <ActionButton 
                         className={board.published ? "unpublish" : "publish"}
                         onClick={() => handleTogglePublish(board.id, !board.published)}
+                        disabled={loadingOperations.has(`publish-${board.id}`)}
                       >
                         {board.published ? <EyeOff size={16} /> : <Eye size={16} />}
-                        {board.published ? 'Unpublish' : 'Publish'}
+                        {loadingOperations.has(`publish-${board.id}`) ? 'Updating...' : (board.published ? 'Unpublish' : 'Publish')}
                       </ActionButton>
                       <ActionButton 
                         className="delete"
                         onClick={() => handleDeleteBoard(board.id)}
+                        disabled={loadingOperations.has(`delete-${board.id}`)}
                       >
                         <Trash2 size={16} />
-                        Delete
+                        {loadingOperations.has(`delete-${board.id}`) ? 'Deleting...' : 'Delete'}
                       </ActionButton>
                     </BoardActions>
                   </BoardCard>
