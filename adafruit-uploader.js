@@ -34,7 +34,7 @@ class AdafruitUploader {
           try {
             const files = JSON.parse(data);
             const fzpzFiles = files
-              .filter(file => file.name.endsWith('.fzpz'));
+              .filter(file => file.name.endsWith('.fzpz') && file.name.startsWith('Adafruit'));
             
             console.log(`Found ${fzpzFiles.length} FZPZ files to download:`);
             fzpzFiles.forEach((file, index) => {
@@ -217,8 +217,8 @@ class AdafruitUploader {
 
       console.log(`\n📥 Downloading and processing ${fzpzFiles.length} files...\n`);
       
-      // Step 2: Download and process each file (limit to first 3 for testing)
-      const filesToProcess = fzpzFiles.slice(0, 3);
+      // Step 2: Download and process each file
+      const filesToProcess = fzpzFiles;
       for (let i = 0; i < filesToProcess.length; i++) {
         const file = filesToProcess[i];
         console.log(`\n--- Processing ${i + 1}/${filesToProcess.length}: ${file.name} ---`);

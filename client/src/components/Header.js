@@ -1,7 +1,8 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Cpu, Home, Settings } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Cpu, Home, Settings, LogOut } from 'lucide-react';
 import styled from 'styled-components';
+import { useAuth } from '../contexts/AuthContext';
 
 const HeaderContainer = styled.header`
   position: fixed;
@@ -61,8 +62,48 @@ const NavLink = styled(Link)`
   }
 `;
 
+const LoginButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: ${props => props.$isAuthenticated ? '#10b981' : '#3b82f6'};
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: ${props => props.$isAuthenticated ? '#059669' : '#2563eb'};
+    transform: translateY(-1px);
+  }
+`;
+
+const UserInfo = styled.span`
+  font-size: 14px;
+  opacity: 0.9;
+`;
+
 const Header = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isAuthenticated, user, logout } = useAuth();
+  
+  const handleAdminClick = () => {
+    if (isAuthenticated) {
+      navigate('/admin');
+    } else {
+      // Show login modal or redirect to login
+      navigate('/admin');
+    }
+  };
+  
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
   
   return (
     <HeaderContainer>
@@ -76,10 +117,28 @@ const Header = () => {
             <Home size={20} />
             Home
           </NavLink>
-          <NavLink to="/admin" $active={location.pathname === '/admin'}>
-            <Settings size={20} />
-            Admin
-          </NavLink>
+          {isAuthenticated && (
+            <NavLink to="/admin" $active={location.pathname === '/admin'}>
+              <Settings size={20} />
+              Admin
+            </NavLink>
+          )}
+          <LoginButton 
+            $isAuthenticated={isAuthenticated}
+            onClick={isAuthenticated ? handleLogout : handleAdminClick}
+          >
+            {isAuthenticated ? (
+              <>
+                <LogOut size={20} />
+                <UserInfo>Logout ({user?.username})</UserInfo>
+              </>
+            ) : (
+              <>
+                <Settings size={20} />
+                Admin
+              </>
+            )}
+          </LoginButton>
         </Nav>
       </HeaderContent>
     </HeaderContainer>

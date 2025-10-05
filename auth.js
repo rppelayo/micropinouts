@@ -24,7 +24,15 @@ class AuthManager {
         // Login button
         const loginBtn = document.getElementById('loginBtn');
         if (loginBtn) {
-            loginBtn.addEventListener('click', () => this.showLoginModal());
+            loginBtn.addEventListener('click', () => {
+                if (this.isAuthenticated) {
+                    // If already logged in, redirect to admin dashboard
+                    window.location.href = '/admin.html';
+                } else {
+                    // If not logged in, show login modal
+                    this.showLoginModal();
+                }
+            });
         }
 
         // Login form
@@ -78,9 +86,11 @@ class AuthManager {
                 creatorCard.style.display = 'block';
             }
             
-            // Update login button to logout
-            loginBtn.textContent = `Logout (${this.currentUser.username})`;
-            loginBtn.onclick = () => this.logout();
+            // Update login button to show admin dashboard
+            loginBtn.textContent = `Admin Dashboard (${this.currentUser.username})`;
+            loginBtn.onclick = () => {
+                window.location.href = '/admin.html';
+            };
         } else {
             // Hide authenticated navigation
             if (authNav) {

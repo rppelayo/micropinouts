@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
+import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Upload, 
@@ -15,6 +16,49 @@ import {
   Cpu,
   Zap
 } from 'lucide-react';
+
+// Define keyframes at the top level
+const shimmer = keyframes`
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+`;
+
+const PaginationContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 32px;
+  padding: 20px 0;
+`;
+
+const PaginationButton = styled.button`
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  background: ${props => props.$active ? '#3b82f6' : 'white'};
+  color: ${props => props.$active ? 'white' : '#64748b'};
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 40px;
+  
+  &:hover {
+    background: ${props => props.$active ? '#3b82f6' : '#f1f5f9'};
+    border-color: #3b82f6;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const PaginationInfo = styled.div`
+  font-size: 14px;
+  color: #64748b;
+  margin: 0 16px;
+`;
 
 const AdminContainer = styled.div`
   padding: 40px 0;
@@ -47,20 +91,6 @@ const AdminTitle = styled.h1`
   gap: 12px;
 `;
 
-const LogoutButton = styled.button`
-  background: #ef4444;
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background: #dc2626;
-  }
-`;
 
 const AdminContent = styled.div`
   max-width: 1200px;
@@ -525,9 +555,180 @@ const LoadingSpinner = styled.div`
   height: 200px;
 `;
 
+const BoardsLoadingContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 3rem 2rem;
+`;
+
+const BoardsLoadingSpinner = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+`;
+
+const SpinnerRing = styled.div`
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+  animation: pulse 2s ease-in-out infinite;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border: 3px solid #3b82f6;
+    border-top: 3px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.8; }
+  }
+  
+  @keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+  }
+`;
+
+const LoadingContent = styled.div`
+  text-align: center;
+  color: #4a5568;
+`;
+
+const LoadingTitle = styled.h3`
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  color: #1e293b;
+`;
+
+const LoadingText = styled.p`
+  font-size: 1rem;
+  margin: 0 0 1rem 0;
+  color: #64748b;
+`;
+
+const LoadingDots = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  
+  span {
+    width: 8px;
+    height: 8px;
+    background: #3b82f6;
+    border-radius: 50%;
+    animation: bounce 1.4s ease-in-out infinite both;
+    
+    &:nth-child(1) { animation-delay: -0.32s; }
+    &:nth-child(2) { animation-delay: -0.16s; }
+    &:nth-child(3) { animation-delay: 0s; }
+  }
+  
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+  }
+`;
+
+const SkeletonGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+`;
+
+const SkeletonCard = styled.div`
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+`;
+
+const SkeletonHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+`;
+
+const SkeletonTitle = styled.div`
+  height: 18px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: ${shimmer} 1.5s infinite;
+  border-radius: 4px;
+  width: 60%;
+`;
+
+const SkeletonBadge = styled.div`
+  height: 16px;
+  width: 60px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: ${shimmer} 1.5s infinite;
+  border-radius: 12px;
+`;
+
+const SkeletonInfo = styled.div`
+  height: 14px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: ${shimmer} 1.5s infinite;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  width: 80%;
+`;
+
+const SkeletonActions = styled.div`
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+`;
+
+const SkeletonButton = styled.div`
+  height: 28px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: ${shimmer} 1.5s infinite;
+  border-radius: 6px;
+  flex: 1;
+`;
+
 const Admin = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [token, setToken] = useState(localStorage.getItem('adminToken'));
+  const { isAuthenticated, token, login, logout, verifyToken } = useAuth();
   const [activeTab, setActiveTab] = useState('boards');
   const [boards, setBoards] = useState([]);
   const [filteredBoards, setFilteredBoards] = useState([]);
@@ -535,8 +736,19 @@ const Admin = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [manufacturerFilter, setManufacturerFilter] = useState('all');
   const [loading, setLoading] = useState(false);
+  const [boardsLoading, setBoardsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalBoards, setTotalBoards] = useState(0);
+  const [pageSize] = useState(12); // Fixed page size for consistency
+  
+  // Cache state
+  const [boardsCache, setBoardsCache] = useState(new Map());
+  const [lastFetchTime, setLastFetchTime] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [editingBoard, setEditingBoard] = useState(null);
   const [uploadedFile, setUploadedFile] = useState(null);
@@ -562,10 +774,10 @@ const Admin = () => {
   });
 
   useEffect(() => {
-    if (token) {
-      verifyToken();
+    if (token && isAuthenticated) {
+      fetchBoards();
     }
-  }, [token]);
+  }, [token, isAuthenticated]);
 
 
   // Handle pending modal open after form is updated
@@ -576,27 +788,6 @@ const Admin = () => {
     }
   }, [pendingModalOpen, fritzingData, boardForm]);
 
-  const verifyToken = async () => {
-    try {
-      const response = await fetch('/api/admin/boards', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (response.ok) {
-        setIsAuthenticated(true);
-        fetchBoards();
-      } else {
-        localStorage.removeItem('adminToken');
-        setToken(null);
-      }
-    } catch (error) {
-      console.error('Token verification failed:', error);
-      localStorage.removeItem('adminToken');
-      setToken(null);
-    }
-  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -604,23 +795,12 @@ const Admin = () => {
     setError(null);
 
     try {
-      const response = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(loginForm)
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        localStorage.setItem('adminToken', data.token);
-        setToken(data.token);
-        setIsAuthenticated(true);
+      const result = await login(loginForm.username, loginForm.password);
+      
+      if (result.success) {
         fetchBoards();
       } else {
-        setError(data.error || 'Login failed');
+        setError(result.error || 'Login failed');
       }
     } catch (error) {
       setError('Login failed. Please try again.');
@@ -629,15 +809,36 @@ const Admin = () => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('adminToken');
-    setToken(null);
-    setIsAuthenticated(false);
-    navigate('/');
+
+  // Debounced search function
+  const debounce = (func, wait) => {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
   };
 
   const fetchBoards = async () => {
+    // Check cache first (cache for 60 seconds)
+    const now = Date.now();
+    if (boardsCache.has('all-boards') && (now - lastFetchTime) < 60000) {
+      const cachedData = boardsCache.get('all-boards');
+      setBoards(cachedData);
+      setTotalBoards(cachedData.length);
+      setBoardsLoading(false);
+      return;
+    }
+
+    setBoardsLoading(true);
+    setError(null);
+    
     try {
+      // Load all boards at once for fast client-side filtering
       const response = await fetch('/api/admin/boards', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -646,44 +847,83 @@ const Admin = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setBoards(data);
+        
+        // Handle both array and paginated response formats
+        const boardsData = Array.isArray(data) ? data : (data.boards || data.pinouts || []);
+        
+        setBoards(boardsData);
+        setTotalBoards(boardsData.length);
+        
+        // Cache the result
+        setBoardsCache(prev => new Map(prev).set('all-boards', boardsData));
+        setLastFetchTime(now);
+        setError(null);
+      } else {
+        setError('Failed to load boards');
       }
     } catch (error) {
       console.error('Failed to fetch boards:', error);
+      setError('Failed to load boards. Please check your connection.');
+    } finally {
+      setBoardsLoading(false);
     }
   };
 
-  // Filter boards based on search term and filters
+  // Initial load
+  useEffect(() => {
+    fetchBoards();
+  }, []);
+
+  // Client-side filtering with pagination
   useEffect(() => {
     let filtered = boards;
 
-    // Search filter
+    // Apply search filter
     if (searchTerm) {
       filtered = filtered.filter(board =>
-        board.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        board.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        board.manufacturer?.toLowerCase().includes(searchTerm.toLowerCase())
+        board.chip_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        board.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        board.description?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    // Status filter
+    // Apply status filter
     if (statusFilter !== 'all') {
       filtered = filtered.filter(board => {
-        if (statusFilter === 'published') return board.published;
-        if (statusFilter === 'draft') return !board.published;
-        return true;
+        switch (statusFilter) {
+          case 'published':
+            return board.is_published === 1;
+          case 'draft':
+            return board.is_published === 0;
+          default:
+            return true;
+        }
       });
     }
 
-    // Manufacturer filter
+    // Apply manufacturer filter
     if (manufacturerFilter !== 'all') {
-      filtered = filtered.filter(board => 
-        board.manufacturer?.toLowerCase() === manufacturerFilter.toLowerCase()
+      filtered = filtered.filter(board =>
+        board.manufacturer?.toLowerCase().includes(manufacturerFilter.toLowerCase())
       );
     }
 
-    setFilteredBoards(filtered);
-  }, [boards, searchTerm, statusFilter, manufacturerFilter]);
+    // Calculate pagination
+    const totalFiltered = filtered.length;
+    const totalPages = Math.ceil(totalFiltered / pageSize);
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const paginatedBoards = filtered.slice(startIndex, endIndex);
+
+    setFilteredBoards(paginatedBoards);
+    setTotalPages(totalPages);
+    setTotalBoards(totalFiltered);
+  }, [boards, searchTerm, statusFilter, manufacturerFilter, currentPage, pageSize]);
+
+  // Reset to page 1 when search or filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, manufacturerFilter]);
 
   // Get unique manufacturers for filter dropdown
   const manufacturers = [...new Set(boards.map(board => board.manufacturer).filter(Boolean))];
@@ -692,6 +932,13 @@ const Admin = () => {
     setSearchTerm('');
     setStatusFilter('all');
     setManufacturerFilter('all');
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+    // Scroll to top when changing pages
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleFileUpload = async (file) => {
@@ -745,52 +992,6 @@ const Admin = () => {
     }
   };
 
-  const handleTestData = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch('/api/admin/test-fritzing-data', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setFritzingData(data.data);
-        
-        // Pre-fill form with test board metadata
-        if (data.data.boardMetadata) {
-          const metadata = data.data.boardMetadata;
-          const newFormData = {
-            name: metadata.title || '',
-            description: metadata.description || '',
-            manufacturer: metadata.manufacturer || '',
-            package_type: metadata.package_type || '',
-            voltage_range: metadata.voltage_range || '',
-            clock_speed: metadata.clock_speed || '',
-            flash_memory: metadata.flash_memory || '',
-            ram: metadata.ram || '',
-            image_url: ''
-          };
-          setBoardForm(newFormData);
-        }
-        
-        setSuccess('Test data loaded successfully!');
-        setPendingModalOpen(true);
-      } else {
-        setError(data.error || 'Failed to load test data');
-      }
-    } catch (error) {
-      setError('Failed to load test data. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -846,7 +1047,9 @@ const Admin = () => {
           image_url: ''
         });
         setFritzingData(null);
-        fetchBoards();
+        // Clear cache and refresh data
+        setBoardsCache(new Map());
+        await fetchBoards();
       } else {
         setError(data.error || 'Failed to create board');
       }
@@ -872,7 +1075,9 @@ const Admin = () => {
 
       if (response.ok) {
         setSuccess('Board deleted successfully!');
-        fetchBoards();
+        // Clear cache and refresh data
+        setBoardsCache(new Map());
+        await fetchBoards();
       } else {
         setError('Failed to delete board');
       }
@@ -894,7 +1099,9 @@ const Admin = () => {
 
       if (response.ok) {
         setSuccess(`Board ${published ? 'published' : 'unpublished'} successfully!`);
-        fetchBoards();
+        // Clear cache and refresh data
+        setBoardsCache(new Map());
+        await fetchBoards();
       } else {
         setError(`Failed to ${published ? 'publish' : 'unpublish'} board`);
       }
@@ -949,14 +1156,11 @@ const Admin = () => {
             <Settings size={32} />
             Admin Panel
           </AdminTitle>
-          <LogoutButton onClick={handleLogout}>
-            Logout
-          </LogoutButton>
         </HeaderContent>
       </AdminHeader>
 
       <AdminContent>
-        {error && <ErrorMessage>{error}</ErrorMessage>}
+        {error && !boardsLoading && <ErrorMessage>{error}</ErrorMessage>}
         {success && <SuccessMessage>{success}</SuccessMessage>}
 
         <TabsContainer>
@@ -1012,58 +1216,133 @@ const Admin = () => {
                   </FilterSelect>
                 </FilterGroup>
                 <ResultsCount>
-                  {filteredBoards.length} of {boards.length} boards
+                  {totalBoards} boards total
+                  {totalPages > 1 && ` • Page ${currentPage} of ${totalPages}`}
                 </ResultsCount>
                 <ClearFiltersButton onClick={clearFilters}>
                   Clear Filters
                 </ClearFiltersButton>
               </FilterRow>
             </SearchAndFilterSection>
-            <BoardsGrid>
-              {filteredBoards.map(board => (
-                <BoardCard key={board.id}>
-                  <BoardTitle>
-                    <span>{board.name}</span>
-                    <PublishStatus published={board.published}>
-                      {board.published ? 'Published' : 'Draft'}
-                    </PublishStatus>
-                  </BoardTitle>
-                  <BoardInfo>
-                    {board.pin_count} pins • {board.manufacturer} • {board.package_type}
-                  </BoardInfo>
-                  <BoardActions>
-                    <ActionButton 
-                      className="edit"
-                      onClick={() => navigate(`/admin/boards/${board.id}/edit`)}
+            {boardsLoading ? (
+              <BoardsLoadingContainer>
+                <BoardsLoadingSpinner>
+                  <SpinnerRing />
+                  <LoadingContent>
+                    <LoadingTitle>Loading Boards</LoadingTitle>
+                    <LoadingText>Fetching data from database...</LoadingText>
+                    <LoadingDots>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </LoadingDots>
+                  </LoadingContent>
+                </BoardsLoadingSpinner>
+              </BoardsLoadingContainer>
+            ) : filteredBoards.length > 0 ? (
+              <BoardsGrid>
+                {filteredBoards.map(board => (
+                  <BoardCard key={board.id}>
+                    <BoardTitle>
+                      <span>{board.name}</span>
+                      <PublishStatus published={board.published}>
+                        {board.published ? 'Published' : 'Draft'}
+                      </PublishStatus>
+                    </BoardTitle>
+                    <BoardInfo>
+                      {board.pin_count} pins • {board.manufacturer} • {board.package_type}
+                    </BoardInfo>
+                    <BoardActions>
+                      <ActionButton 
+                        className="edit"
+                        onClick={() => navigate(`/admin/boards/${board.id}/edit`)}
+                      >
+                        <Edit size={16} />
+                        Edit
+                      </ActionButton>
+                      <ActionButton 
+                        className="view"
+                        onClick={() => navigate(`/board/${board.id}`)}
+                      >
+                        <Eye size={16} />
+                        View
+                      </ActionButton>
+                      <ActionButton 
+                        className={board.published ? "unpublish" : "publish"}
+                        onClick={() => handleTogglePublish(board.id, !board.published)}
+                      >
+                        {board.published ? <EyeOff size={16} /> : <Eye size={16} />}
+                        {board.published ? 'Unpublish' : 'Publish'}
+                      </ActionButton>
+                      <ActionButton 
+                        className="delete"
+                        onClick={() => handleDeleteBoard(board.id)}
+                      >
+                        <Trash2 size={16} />
+                        Delete
+                      </ActionButton>
+                    </BoardActions>
+                  </BoardCard>
+                ))}
+              </BoardsGrid>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <h3 style={{ color: '#64748b', marginBottom: '16px' }}>No boards found</h3>
+                <p style={{ color: '#94a3b8' }}>
+                  {searchTerm || statusFilter !== 'all' || manufacturerFilter !== 'all'
+                    ? 'Try adjusting your search term or filters to find what you\'re looking for.'
+                    : 'No boards have been uploaded yet. Use the Upload FZPZ tab to add some boards.'
+                  }
+                </p>
+              </div>
+            )}
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <PaginationContainer>
+                <PaginationButton
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  ←
+                </PaginationButton>
+                
+                {/* Page numbers */}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <PaginationButton
+                      key={pageNum}
+                      $active={currentPage === pageNum}
+                      onClick={() => handlePageChange(pageNum)}
                     >
-                      <Edit size={16} />
-                      Edit
-                    </ActionButton>
-                    <ActionButton 
-                      className="view"
-                      onClick={() => navigate(`/board/${board.id}`)}
-                    >
-                      <Eye size={16} />
-                      View
-                    </ActionButton>
-                    <ActionButton 
-                      className={board.published ? "unpublish" : "publish"}
-                      onClick={() => handleTogglePublish(board.id, !board.published)}
-                    >
-                      {board.published ? <EyeOff size={16} /> : <Eye size={16} />}
-                      {board.published ? 'Unpublish' : 'Publish'}
-                    </ActionButton>
-                    <ActionButton 
-                      className="delete"
-                      onClick={() => handleDeleteBoard(board.id)}
-                    >
-                      <Trash2 size={16} />
-                      Delete
-                    </ActionButton>
-                  </BoardActions>
-                </BoardCard>
-              ))}
-            </BoardsGrid>
+                      {pageNum}
+                    </PaginationButton>
+                  );
+                })}
+                
+                <PaginationButton
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  →
+                </PaginationButton>
+                
+                <PaginationInfo>
+                  Showing {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, totalBoards)} of {totalBoards}
+                </PaginationInfo>
+              </PaginationContainer>
+            )}
           </TabContent>
         )}
 
@@ -1087,15 +1366,6 @@ const Admin = () => {
               />
             </UploadArea>
             
-            <div style={{ marginTop: '24px', textAlign: 'center' }}>
-              <Button 
-                onClick={handleTestData}
-                style={{ background: '#10b981' }}
-                disabled={loading}
-              >
-                {loading ? 'Loading...' : 'Load Test Data (for testing)'}
-              </Button>
-            </div>
           </TabContent>
         )}
 

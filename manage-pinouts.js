@@ -333,9 +333,21 @@ class PinoutManager {
     showLoading() {
         const grid = document.getElementById('pinoutsGrid');
         grid.innerHTML = `
-            <div class="loading-spinner">
-                <i class="fas fa-spinner fa-spin"></i>
-                <p>Loading pinouts...</p>
+            <div class="loading-container">
+                <div class="loading-spinner-enhanced">
+                    <div class="spinner-ring">
+                        <div class="spinner-ring-inner"></div>
+                    </div>
+                    <div class="loading-content">
+                        <h3>Loading Pinouts</h3>
+                        <p>Fetching data from database...</p>
+                        <div class="loading-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
     }
