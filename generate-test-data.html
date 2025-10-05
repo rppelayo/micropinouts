@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate Test Data - MicroPinouts</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .test-data-generator {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        .test-pinout {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        .test-pinout h3 {
+            margin: 0 0 0.5rem 0;
+            color: #2d3748;
+        }
+        .test-pinout p {
+            margin: 0 0 0.5rem 0;
+            color: #718096;
+            font-size: 0.9rem;
+        }
+        .pin-count {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+        }
+        .btn:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+        .btn-success {
+            background: #27ae60;
+        }
+        .btn-success:hover {
+            background: #229954;
+        }
+        .btn-warning {
+            background: #f39c12;
+        }
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+        .instructions {
+            background: #e6fffa;
+            border: 1px solid #81e6d9;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        .instructions h4 {
+            margin: 0 0 0.5rem 0;
+            color: #234e52;
+        }
+        .instructions code {
+            background: #f7fafc;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="logo">
+                    <a href="index.html">MicroPinouts</a>
+                </h1>
+                <nav class="nav">
+                    <a href="index.html" class="nav-link">Home</a>
+                    <a href="pinout-creator.html" class="nav-link">Pinout Creator</a>
+                    <a href="manage-pinouts.html" class="nav-link">Manage Pinouts</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="test-data-generator">
+                <h1>Generate Test Data</h1>
+                <p>This page will help you populate the MicroPinouts database with sample pinout data for testing.</p>
+
+                <div class="instructions">
+                    <h4><i class="fas fa-info-circle"></i> Setup Instructions</h4>
+                    <p><strong>Option 1: Using PHP (Recommended)</strong></p>
+                    <ol>
+                        <li>Install PHP and MySQL on your system</li>
+                        <li>Run the database setup: <code>php setup-database.php</code></li>
+                        <li>Run the test data generator: <code>php test-data.php</code></li>
+                    </ol>
+                    <p><strong>Option 2: Manual Database Setup</strong></p>
+                    <ol>
+                        <li>Create a MySQL database named 'micropinouts'</li>
+                        <li>Run the SQL commands from <code>database/schema.sql</code></li>
+                        <li>Use the API endpoints to create pinouts manually</li>
+                    </ol>
+                </div>
+
+                <h2>Sample Test Pinouts</h2>
+                <p>Here are the test pinouts that will be created:</p>
+
+                <div class="test-pinout">
+                    <h3>🔧 ATmega328P</h3>
+                    <p>8-bit Microcontroller • <span class="pin-count">28 pins</span> • 10.16×35.56mm</p>
+                    <p>Complete pinout reference for ATmega328P 8-bit microcontroller with digital and analog pins, UART, SPI, and I2C interfaces.</p>
+                </div>
+
+                <div class="test-pinout">
+                    <h3>📱 Arduino Uno R3</h3>
+                    <p>Development Board • <span class="pin-count">30 pins</span> • 53.3×68.6mm</p>
+                    <p>Arduino Uno R3 development board pinout with digital and analog pins, power outputs, and communication interfaces.</p>
+                </div>
+
+                <div class="test-pinout">
+                    <h3>📱 ESP32-WROOM-32</h3>
+                    <p>Development Board • <span class="pin-count">38 pins</span> • 55×28mm</p>
+                    <p>ESP32-WROOM-32 module pinout with WiFi and Bluetooth capabilities, GPIO pins, and analog inputs.</p>
+                </div>
+
+                <div class="test-pinout">
+                    <h3>🔧 PIC16F84A</h3>
+                    <p>8-bit Microcontroller • <span class="pin-count">18 pins</span> • 10.16×22.86mm</p>
+                    <p>PIC16F84A 8-bit RISC microcontroller pinout reference with 13 I/O pins and programming interface.</p>
+                </div>
+
+                <div class="test-pinout">
+                    <h3>📡 HC-SR04 Ultrasonic Sensor</h3>
+                    <p>Sensor & Module • <span class="pin-count">4 pins</span> • 20×45mm</p>
+                    <p>HC-SR04 ultrasonic distance sensor pinout for measuring distances from 2cm to 400cm.</p>
+                </div>
+
+                <h2>Actions</h2>
+                <button class="btn btn-success" onclick="generateTestData()">
+                    <i class="fas fa-database"></i> Generate Test Data (JavaScript)
+                </button>
+                <button class="btn btn-warning" onclick="clearTestData()">
+                    <i class="fas fa-trash"></i> Clear All Data
+                </button>
+                <a href="manage-pinouts.html" class="btn">
+                    <i class="fas fa-list"></i> View Pinouts
+                </a>
+
+                <div id="status" style="margin-top: 1rem; padding: 1rem; border-radius: 6px; display: none;"></div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 MicroPinouts. Interactive microcontroller pinout reference.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Test pinout data
+        const testPinouts = [
+            {
+                title: 'ATmega328P Pinout Reference',
+                chip_name: 'ATmega328P',
+                category_id: 1,
+                pin_count: 28,
+                left_pin_count: 14,
+                right_pin_count: 14,
+                symmetric_pins: true,
+                board_height: 10.16,
+                board_width: 35.56,
+                background_type: 'default',
+                pin_number_color: '#2c3e50',
+                meta_description: 'Complete pinout reference for ATmega328P 8-bit microcontroller with 28 pins',
+                page_content: '<p>The ATmega328P is a low-power CMOS 8-bit microcontroller based on the AVR enhanced RISC architecture.</p>',
+                pins: generateATmega328PPins()
+            },
+            {
+                title: 'Arduino Uno R3 Pinout Guide',
+                chip_name: 'Arduino Uno R3',
+                category_id: 4,
+                pin_count: 30,
+                left_pin_count: 15,
+                right_pin_count: 15,
+                symmetric_pins: true,
+                board_height: 53.3,
+                board_width: 68.6,
+                background_type: 'default',
+                pin_number_color: '#2c3e50',
+                meta_description: 'Arduino Uno R3 development board pinout with digital and analog pins',
+                page_content: '<p>The Arduino Uno R3 is a microcontroller board based on the ATmega328P.</p>',
+                pins: generateArduinoUnoPins()
+            },
+            {
+                title: 'ESP32-WROOM-32 Pinout Diagram',
+                chip_name: 'ESP32-WROOM-32',
+                category_id: 4,
+                pin_count: 38,
+                left_pin_count: 19,
+                right_pin_count: 19,
+                symmetric_pins: true,
+                board_height: 55,
+                board_width: 28,
+                background_type: 'default',
+                pin_number_color: '#2c3e50',
+                meta_description: 'ESP32-WROOM-32 module pinout with WiFi and Bluetooth capabilities',
+                page_content: '<p>The ESP32-WROOM-32 is a powerful WiFi and Bluetooth enabled microcontroller module.</p>',
+                pins: generateESP32Pins()
+            },
+            {
+                title: 'PIC16F84A Microcontroller Pinout',
+                chip_name: 'PIC16F84A',
+                category_id: 1,
+                pin_count: 18,
+                left_pin_count: 9,
+                right_pin_count: 9,
+                symmetric_pins: true,
+                board_height: 10.16,
+                board_width: 22.86,
+                background_type: 'default',
+                pin_number_color: '#2c3e50',
+                meta_description: 'PIC16F84A 8-bit RISC microcontroller pinout reference',
+                page_content: '<p>The PIC16F84A is an 8-bit RISC microcontroller with 1.75KB flash memory.</p>',
+                pins: generatePIC16F84APins()
+            },
+            {
+                title: 'HC-SR04 Ultrasonic Sensor Pinout',
+                chip_name: 'HC-SR04',
+                category_id: 5,
+                pin_count: 4,
+                left_pin_count: 2,
+                right_pin_count: 2,
+                symmetric_pins: true,
+                board_height: 20,
+                board_width: 45,
+                background_type: 'default',
+                pin_number_color: '#2c3e50',
+                meta_description: 'HC-SR04 ultrasonic distance sensor pinout and usage guide',
+                page_content: '<p>The HC-SR04 is an ultrasonic distance sensor that can measure distances from 2cm to 400cm.</p>',
+                pins: generateHCSR04Pins()
+            }
+        ];
+
+        async function generateTestData() {
+            const status = document.getElementById('status');
+            status.style.display = 'block';
+            status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating test data...';
+            status.className = 'info';
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const pinout of testPinouts) {
+                try {
+                    const response = await fetch('api/pinouts.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(pinout)
+                    });
+
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        successCount++;
+                        console.log(`Created pinout: ${pinout.chip_name}`);
+                    } else {
+                        errorCount++;
+                        console.error(`Failed to create ${pinout.chip_name}:`, result.error);
+                    }
+                } catch (error) {
+                    errorCount++;
+                    console.error(`Error creating ${pinout.chip_name}:`, error);
+                }
+            }
+
+            if (errorCount === 0) {
+                status.innerHTML = `<i class="fas fa-check-circle"></i> Successfully created ${successCount} test pinouts!`;
+                status.className = 'success';
+            } else {
+                status.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Created ${successCount} pinouts, ${errorCount} errors. Check console for details.`;
+                status.className = 'warning';
+            }
+        }
+
+        async function clearTestData() {
+            if (!confirm('Are you sure you want to clear all pinout data? This action cannot be undone.')) {
+                return;
+            }
+
+            const status = document.getElementById('status');
+            status.style.display = 'block';
+            status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Clearing data...';
+            status.className = 'info';
+
+            try {
+                // Note: This would require a DELETE endpoint for all pinouts
+                // For now, we'll just show a message
+                status.innerHTML = '<i class="fas fa-info-circle"></i> Clear functionality requires database access. Use your database management tool to clear the published_pinouts table.';
+                status.className = 'info';
+            } catch (error) {
+                status.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error clearing data. Check console for details.';
+                status.className = 'error';
+            }
+        }
+
+        // Pin generation functions
+        function generateATmega328PPins() {
+            return [
+                {number: 1, name: 'PC6/RESET', type: 'reset', side: 'left', functions: ['Reset'], description: 'Reset pin', voltage: '0-5V'},
+                {number: 2, name: 'PD0/RXD', type: 'data', side: 'left', functions: ['UART RX'], description: 'UART receive', voltage: '0-5V'},
+                {number: 3, name: 'PD1/TXD', type: 'data', side: 'left', functions: ['UART TX'], description: 'UART transmit', voltage: '0-5V'},
+                {number: 4, name: 'PD2/INT0', type: 'gpio', side: 'left', functions: ['GPIO', 'External Interrupt'], description: 'Digital pin 2', voltage: '0-5V'},
+                {number: 5, name: 'PD3/INT1', type: 'gpio', side: 'left', functions: ['GPIO', 'External Interrupt'], description: 'Digital pin 3', voltage: '0-5V'},
+                {number: 6, name: 'PD4/T0', type: 'gpio', side: 'left', functions: ['GPIO', 'Timer0'], description: 'Digital pin 4', voltage: '0-5V'},
+                {number: 7, name: 'VCC', type: 'power', side: 'left', functions: ['Power'], description: 'Positive supply voltage', voltage: '4.5-5.5V'},
+                {number: 8, name: 'GND', type: 'gnd', side: 'left', functions: ['Ground'], description: 'Ground reference', voltage: '0V'},
+                {number: 9, name: 'PB6/XTAL1', type: 'clock', side: 'left', functions: ['Crystal Oscillator'], description: 'Crystal oscillator input', voltage: '0-5V'},
+                {number: 10, name: 'PB7/XTAL2', type: 'clock', side: 'left', functions: ['Crystal Oscillator'], description: 'Crystal oscillator output', voltage: '0-5V'},
+                {number: 11, name: 'PD5/T1', type: 'gpio', side: 'left', functions: ['GPIO', 'Timer1'], description: 'Digital pin 5', voltage: '0-5V'},
+                {number: 12, name: 'PD6/AIN0', type: 'analog', side: 'left', functions: ['Analog Input'], description: 'Analog input 0', voltage: '0-5V'},
+                {number: 13, name: 'PD7/AIN1', type: 'analog', side: 'left', functions: ['Analog Input'], description: 'Analog input 1', voltage: '0-5V'},
+                {number: 14, name: 'PB0/ICP', type: 'gpio', side: 'left', functions: ['GPIO', 'Input Capture'], description: 'Digital pin 8', voltage: '0-5V'},
+                {number: 15, name: 'PB1/OC1A', type: 'gpio', side: 'right', functions: ['GPIO', 'PWM'], description: 'Digital pin 9', voltage: '0-5V'},
+                {number: 16, name: 'PB2/SS', type: 'gpio', side: 'right', functions: ['GPIO', 'SPI SS'], description: 'Digital pin 10', voltage: '0-5V'},
+                {number: 17, name: 'PB3/MOSI', type: 'data', side: 'right', functions: ['SPI MOSI'], description: 'SPI Master Out', voltage: '0-5V'},
+                {number: 18, name: 'PB4/MISO', type: 'data', side: 'right', functions: ['SPI MISO'], description: 'SPI Master In', voltage: '0-5V'},
+                {number: 19, name: 'PB5/SCK', type: 'clock', side: 'right', functions: ['SPI Clock'], description: 'SPI Clock', voltage: '0-5V'},
+                {number: 20, name: 'AVCC', type: 'power', side: 'right', functions: ['Analog Power'], description: 'Analog supply voltage', voltage: '4.5-5.5V'},
+                {number: 21, name: 'AREF', type: 'analog', side: 'right', functions: ['Analog Reference'], description: 'Analog reference voltage', voltage: '0-5V'},
+                {number: 22, name: 'GND', type: 'gnd', side: 'right', functions: ['Ground'], description: 'Ground reference', voltage: '0V'},
+                {number: 23, name: 'PC0/ADC0', type: 'analog', side: 'right', functions: ['Analog Input'], description: 'Analog input A0', voltage: '0-5V'},
+                {number: 24, name: 'PC1/ADC1', type: 'analog', side: 'right', functions: ['Analog Input'], description: 'Analog input A1', voltage: '0-5V'},
+                {number: 25, name: 'PC2/ADC2', type: 'analog', side: 'right', functions: ['Analog Input'], description: 'Analog input A2', voltage: '0-5V'},
+                {number: 26, name: 'PC3/ADC3', type: 'analog', side: 'right', functions: ['Analog Input'], description: 'Analog input A3', voltage: '0-5V'},
+                {number: 27, name: 'PC4/ADC4/SDA', type: 'data', side: 'right', functions: ['I2C SDA'], description: 'I2C Data line', voltage: '0-5V'},
+                {number: 28, name: 'PC5/ADC5/SCL', type: 'data', side: 'right', functions: ['I2C SCL'], description: 'I2C Clock line', voltage: '0-5V'}
+            ];
+        }
+
+        function generateArduinoUnoPins() {
+            return [
+                {number: 1, name: 'D0', type: 'gpio', side: 'left', functions: ['Digital I/O'], description: 'Digital pin 0', voltage: '0-5V'},
+                {number: 2, name: 'D1', type: 'gpio', side: 'left', functions: ['Digital I/O'], description: 'Digital pin 1', voltage: '0-5V'},
+                {number: 3, name: 'D2', type: 'gpio', side: 'left', functions: ['Digital I/O'], description: 'Digital pin 2', voltage: '0-5V'},
+                {number: 4, name: 'D3', type: 'gpio', side: 'left', functions: ['Digital I/O', 'PWM'], description: 'Digital pin 3 (PWM)', voltage: '0-5V'},
+                {number: 5, name: 'D4', type: 'gpio', side: 'left', functions: ['Digital I/O'], description: 'Digital pin 4', voltage: '0-5V'},
+                {number: 6, name: 'D5', type: 'gpio', side: 'left', functions: ['Digital I/O', 'PWM'], description: 'Digital pin 5 (PWM)', voltage: '0-5V'},
+                {number: 7, name: 'D6', type: 'gpio', side: 'left', functions: ['Digital I/O', 'PWM'], description: 'Digital pin 6 (PWM)', voltage: '0-5V'},
+                {number: 8, name: 'D7', type: 'gpio', side: 'left', functions: ['Digital I/O'], description: 'Digital pin 7', voltage: '0-5V'},
+                {number: 9, name: 'D8', type: 'gpio', side: 'left', functions: ['Digital I/O'], description: 'Digital pin 8', voltage: '0-5V'},
+                {number: 10, name: 'D9', type: 'gpio', side: 'left', functions: ['Digital I/O', 'PWM'], description: 'Digital pin 9 (PWM)', voltage: '0-5V'},
+                {number: 11, name: 'D10', type: 'gpio', side: 'left', functions: ['Digital I/O', 'PWM', 'SPI SS'], description: 'Digital pin 10 (PWM, SPI SS)', voltage: '0-5V'},
+                {number: 12, name: 'D11', type: 'gpio', side: 'left', functions: ['Digital I/O', 'PWM', 'SPI MOSI'], description: 'Digital pin 11 (PWM, SPI MOSI)', voltage: '0-5V'},
+                {number: 13, name: 'D12', type: 'gpio', side: 'left', functions: ['Digital I/O', 'SPI MISO'], description: 'Digital pin 12 (SPI MISO)', voltage: '0-5V'},
+                {number: 14, name: 'D13', type: 'gpio', side: 'left', functions: ['Digital I/O', 'SPI SCK'], description: 'Digital pin 13 (SPI SCK)', voltage: '0-5V'},
+                {number: 15, name: 'GND', type: 'gnd', side: 'left', functions: ['Ground'], description: 'Ground', voltage: '0V'},
+                {number: 16, name: 'AREF', type: 'analog', side: 'right', functions: ['Analog Reference'], description: 'Analog reference', voltage: '0-5V'},
+                {number: 17, name: 'A0', type: 'analog', side: 'right', functions: ['Analog Input'], description: 'Analog input A0', voltage: '0-5V'},
+                {number: 18, name: 'A1', type: 'analog', side: 'right', functions: ['Analog Input'], description: 'Analog input A1', voltage: '0-5V'},
+                {number: 19, name: 'A2', type: 'analog', side: 'right', functions: ['Analog Input'], description: 'Analog input A2', voltage: '0-5V'},
+                {number: 20, name: 'A3', type: 'analog', side: 'right', functions: ['Analog Input'], description: 'Analog input A3', voltage: '0-5V'},
+                {number: 21, name: 'A4', type: 'analog', side: 'right', functions: ['Analog Input', 'I2C SDA'], description: 'Analog input A4 (I2C SDA)', voltage: '0-5V'},
+                {number: 22, name: 'A5', type: 'analog', side: 'right', functions: ['Analog Input', 'I2C SCL'], description: 'Analog input A5 (I2C SCL)', voltage: '0-5V'},
+                {number: 23, name: '3.3V', type: 'power', side: 'right', functions: ['Power'], description: '3.3V power output', voltage: '3.3V'},
+                {number: 24, name: '5V', type: 'power', side: 'right', functions: ['Power'], description: '5V power output', voltage: '5V'},
+                {number: 25, name: 'GND', type: 'gnd', side: 'right', functions: ['Ground'], description: 'Ground', voltage: '0V'},
+                {number: 26, name: 'GND', type: 'gnd', side: 'right', functions: ['Ground'], description: 'Ground', voltage: '0V'},
+                {number: 27, name: 'VIN', type: 'power', side: 'right', functions: ['Power Input'], description: 'Voltage input', voltage: '7-12V'},
+                {number: 28, name: 'GND', type: 'gnd', side: 'right', functions: ['Ground'], description: 'Ground', voltage: '0V'},
+                {number: 29, name: 'GND', type: 'gnd', side: 'right', functions: ['Ground'], description: 'Ground', voltage: '0V'},
+                {number: 30, name: 'GND', type: 'gnd', side: 'right', functions: ['Ground'], description: 'Ground', voltage: '0V'}
+            ];
+        }
+
+        function generateESP32Pins() {
+            return [
+                {number: 1, name: 'GND', type: 'gnd', side: 'left', functions: ['Ground'], description: 'Ground', voltage: '0V'},
+                {number: 2, name: '3.3V', type: 'power', side: 'left', functions: ['Power'], description: '3.3V power output', voltage: '3.3V'},
+                {number: 3, name: 'EN', type: 'reset', side: 'left', functions: ['Enable'], description: 'Chip enable', voltage: '0-3.3V'},
+                {number: 4, name: 'GPIO36', type: 'analog', side: 'left', functions: ['Analog Input'], description: 'Analog input A0', voltage: '0-3.3V'},
+                {number: 5, name: 'GPIO39', type: 'analog', side: 'left', functions: ['Analog Input'], description: 'Analog input A3', voltage: '0-3.3V'},
+                {number: 6, name: 'GPIO34', type: 'analog', side: 'left', functions: ['Analog Input'], description: 'Analog input A2', voltage: '0-3.3V'},
+                {number: 7, name: 'GPIO35', type: 'analog', side: 'left', functions: ['Analog Input'], description: 'Analog input A1', voltage: '0-3.3V'},
+                {number: 8, name: 'GPIO32', type: 'gpio', side: 'left', functions: ['Digital I/O'], description: 'Digital pin 32', voltage: '0-3.3V'},
+                {number: 9, name: 'GPIO33', type: 'gpio', side: 'left', functions: ['Digital I/O'], description: 'Digital pin 33', voltage: '0-3.3V'},
+                {number: 10, name: 'GPIO25', type: 'gpio', side: 'left', functions: ['Digital I/O', 'DAC'], description: 'Digital pin 25 (DAC)', voltage: '0-3.3V'},
+                {number: 11, name: 'GPIO26', type: 'gpio', side: 'left', functions: ['Digital I/O', 'DAC'], description: 'Digital pin 26 (DAC)', voltage: '0-3.3V'},
+                {number: 12, name: 'GPIO27', type: 'gpio', side: 'left', functions: ['Digital I/O'], description: 'Digital pin 27', voltage: '0-3.3V'},
+                {number: 13, name: 'GPIO14', type: 'gpio', side: 'left', functions: ['Digital I/O'], description: 'Digital pin 14', voltage: '0-3.3V'},
+                {number: 14, name: 'GPIO12', type: 'gpio', side: 'left', functions: ['Digital I/O'], description: 'Digital pin 12', voltage: '0-3.3V'},
+                {number: 15, name: 'GND', type: 'gnd', side: 'left', functions: ['Ground'], description: 'Ground', voltage: '0V'},
+                {number: 16, name: 'GPIO13', type: 'gpio', side: 'left', functions: ['Digital I/O'], description: 'Digital pin 13', voltage: '0-3.3V'},
+                {number: 17, name: 'D2', type: 'gpio', side: 'left', functions: ['Digital I/O'], description: 'Digital pin 2', voltage: '0-3.3V'},
+                {number: 18, name: 'D3', type: 'gpio', side: 'left', functions: ['Digital I/O'], description: 'Digital pin 3', voltage: '0-3.3V'},
+                {number: 19, name: 'CMD', type: 'special', side: 'left', functions: ['Command'], description: 'Command pin', voltage: '0-3.3V'},
+                {number: 20, name: '5V', type: 'power', side: 'right', functions: ['Power'], description: '5V power input', voltage: '5V'},
+                {number: 21, name: 'GND', type: 'gnd', side: 'right', functions: ['Ground'], description: 'Ground', voltage: '0V'},
+                {number: 22, name: '3.3V', type: 'power', side: 'right', functions: ['Power'], description: '3.3V power output', voltage: '3.3V'},
+                {number: 23, name: 'EN', type: 'reset', side: 'right', functions: ['Enable'], description: 'Chip enable', voltage: '0-3.3V'},
+                {number: 24, name: 'GPIO23', type: 'gpio', side: 'right', functions: ['Digital I/O'], description: 'Digital pin 23', voltage: '0-3.3V'},
+                {number: 25, name: 'GPIO22', type: 'gpio', side: 'right', functions: ['Digital I/O'], description: 'Digital pin 22', voltage: '0-3.3V'},
+                {number: 26, name: 'TX', type: 'data', side: 'right', functions: ['UART TX'], description: 'UART transmit', voltage: '0-3.3V'},
+                {number: 27, name: 'RX', type: 'data', side: 'right', functions: ['UART RX'], description: 'UART receive', voltage: '0-3.3V'},
+                {number: 28, name: 'GPIO21', type: 'gpio', side: 'right', functions: ['Digital I/O', 'I2C SDA'], description: 'Digital pin 21 (I2C SDA)', voltage: '0-3.3V'},
+                {number: 29, name: 'GPIO19', type: 'gpio', side: 'right', functions: ['Digital I/O', 'I2C SCL'], description: 'Digital pin 19 (I2C SCL)', voltage: '0-3.3V'},
+                {number: 30, name: 'GPIO18', type: 'gpio', side: 'right', functions: ['Digital I/O'], description: 'Digital pin 18', voltage: '0-3.3V'},
+                {number: 31, name: 'GPIO5', type: 'gpio', side: 'right', functions: ['Digital I/O'], description: 'Digital pin 5', voltage: '0-3.3V'},
+                {number: 32, name: 'GPIO17', type: 'gpio', side: 'right', functions: ['Digital I/O'], description: 'Digital pin 17', voltage: '0-3.3V'},
+                {number: 33, name: 'GPIO16', type: 'gpio', side: 'right', functions: ['Digital I/O'], description: 'Digital pin 16', voltage: '0-3.3V'},
+                {number: 34, name: 'GPIO4', type: 'gpio', side: 'right', functions: ['Digital I/O'], description: 'Digital pin 4', voltage: '0-3.3V'},
+                {number: 35, name: 'GPIO0', type: 'gpio', side: 'right', functions: ['Digital I/O'], description: 'Digital pin 0', voltage: '0-3.3V'},
+                {number: 36, name: 'GND', type: 'gnd', side: 'right', functions: ['Ground'], description: 'Ground', voltage: '0V'},
+                {number: 37, name: 'GPIO2', type: 'gpio', side: 'right', functions: ['Digital I/O'], description: 'Digital pin 2', voltage: '0-3.3V'},
+                {number: 38, name: 'GPIO15', type: 'gpio', side: 'right', functions: ['Digital I/O'], description: 'Digital pin 15', voltage: '0-3.3V'}
+            ];
+        }
+
+        function generatePIC16F84APins() {
+            return [
+                {number: 1, name: 'MCLR/VPP', type: 'reset', side: 'left', functions: ['Reset', 'Programming'], description: 'Master Clear/Programming voltage', voltage: '0-5.5V'},
+                {number: 2, name: 'RA0', type: 'gpio', side: 'left', functions: ['Digital I/O'], description: 'Port A bit 0', voltage: '0-5.5V'},
+                {number: 3, name: 'RA1', type: 'gpio', side: 'left', functions: ['Digital I/O'], description: 'Port A bit 1', voltage: '0-5.5V'},
+                {number: 4, name: 'RA2', type: 'gpio', side: 'left', functions: ['Digital I/O'], description: 'Port A bit 2', voltage: '0-5.5V'},
+                {number: 5, name: 'RA3', type: 'gpio', side: 'left', functions: ['Digital I/O'], description: 'Port A bit 3', voltage: '0-5.5V'},
+                {number: 6, name: 'RA4/T0CKI', type: 'gpio', side: 'left', functions: ['Digital I/O', 'Timer0 Clock'], description: 'Port A bit 4/Timer0 clock', voltage: '0-5.5V'},
+                {number: 7, name: 'VSS', type: 'gnd', side: 'left', functions: ['Ground'], description: 'Ground reference', voltage: '0V'},
+                {number: 8, name: 'OSC1/CLKIN', type: 'clock', side: 'left', functions: ['Clock Input'], description: 'Oscillator input', voltage: '0-5.5V'},
+                {number: 9, name: 'OSC2/CLKOUT', type: 'clock', side: 'left', functions: ['Clock Output'], description: 'Oscillator output', voltage: '0-5.5V'},
+                {number: 10, name: 'RB0/INT', type: 'gpio', side: 'right', functions: ['Digital I/O', 'External Interrupt'], description: 'Port B bit 0/External interrupt', voltage: '0-5.5V'},
+                {number: 11, name: 'RB1', type: 'gpio', side: 'right', functions: ['Digital I/O'], description: 'Port B bit 1', voltage: '0-5.5V'},
+                {number: 12, name: 'RB2', type: 'gpio', side: 'right', functions: ['Digital I/O'], description: 'Port B bit 2', voltage: '0-5.5V'},
+                {number: 13, name: 'RB3', type: 'gpio', side: 'right', functions: ['Digital I/O'], description: 'Port B bit 3', voltage: '0-5.5V'},
+                {number: 14, name: 'RB4', type: 'gpio', side: 'right', functions: ['Digital I/O', 'Interrupt on Change'], description: 'Port B bit 4/Interrupt on change', voltage: '0-5.5V'},
+                {number: 15, name: 'RB5', type: 'gpio', side: 'right', functions: ['Digital I/O', 'Interrupt on Change'], description: 'Port B bit 5/Interrupt on change', voltage: '0-5.5V'},
+                {number: 16, name: 'RB6', type: 'gpio', side: 'right', functions: ['Digital I/O', 'Interrupt on Change'], description: 'Port B bit 6/Interrupt on change', voltage: '0-5.5V'},
+                {number: 17, name: 'RB7', type: 'gpio', side: 'right', functions: ['Digital I/O', 'Interrupt on Change'], description: 'Port B bit 7/Interrupt on change', voltage: '0-5.5V'},
+                {number: 18, name: 'VDD', type: 'power', side: 'right', functions: ['Power'], description: 'Positive supply voltage', voltage: '2.0-5.5V'}
+            ];
+        }
+
+        function generateHCSR04Pins() {
+            return [
+                {number: 1, name: 'VCC', type: 'power', side: 'left', functions: ['Power'], description: 'Power supply', voltage: '5V'},
+                {number: 2, name: 'TRIG', type: 'gpio', side: 'left', functions: ['Trigger'], description: 'Trigger pin', voltage: '0-5V'},
+                {number: 3, name: 'ECHO', type: 'gpio', side: 'right', functions: ['Echo'], description: 'Echo pin', voltage: '0-5V'},
+                {number: 4, name: 'GND', type: 'gnd', side: 'right', functions: ['Ground'], description: 'Ground', voltage: '0V'}
+            ];
+        }
+    </script>
+</body>
+</html>

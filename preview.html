@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinout Preview - MicroPinouts</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="pinout-styles.css">
+    <link rel="stylesheet" href="manage-styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔌</text></svg>">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="logo">
+                    <a href="index.html">MicroPinouts</a>
+                </h1>
+                <nav class="nav">
+                    <a href="index.html" class="nav-link">Home</a>
+                    <a href="pinout-creator.html" class="nav-link">Pinout Creator</a>
+                    <a href="manage-pinouts.html" class="nav-link">Manage Pinouts</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <div class="content-grid">
+                <div class="pinout-section">
+                    <div class="section-header">
+                        <h2 id="previewTitle">Pinout Preview</h2>
+                        <p class="section-subtitle" id="previewSubtitle">Loading pinout data...</p>
+                    </div>
+                    
+                    <div id="previewPinout" class="chip-diagram">
+                        <!-- Generated SVG pinout will be rendered here -->
+                    </div>
+                    
+                    <div class="content-section" id="contentSection">
+                        <!-- SEO content will be rendered here -->
+                    </div>
+                </div>
+
+                <div class="info-panel">
+                    <div class="pin-details" id="pinDetails">
+                        <h3>Pin Information</h3>
+                        <p class="pin-placeholder">Click on a pin to view details</p>
+                    </div>
+
+                    <div class="chip-specs">
+                        <h3>Specifications</h3>
+                        <div class="spec-grid" id="chipSpecs">
+                            <!-- Specifications will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <div class="downloads-section">
+                        <h3>Downloads</h3>
+                        <div class="action-buttons">
+                            <button id="downloadPdfBtn" class="action-btn download-btn" title="Download Pinout as PDF">
+                                <span class="btn-icon">📄</span>
+                                <span class="btn-text">Pinout as PDF</span>
+                            </button>
+                            <button id="downloadPngBtn" class="action-btn download-btn" title="Download Pinout as Image (PNG)">
+                                <span class="btn-icon">🖼️</span>
+                                <span class="btn-text">Pinout as Image (PNG)</span>
+                            </button>
+                            <a id="datasheetBtn" class="action-btn datasheet-btn" title="View Datasheet" target="_blank" style="display: none;">
+                                <span class="btn-icon">📋</span>
+                                <span class="btn-text">View Datasheet</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 MicroPinouts. Interactive microcontroller pinout reference.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+    <script src="preview.js"></script>
+</body>
+</html>

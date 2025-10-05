@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinout Creator - MicroPinouts</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="pinout-styles.css">
+    <link rel="stylesheet" href="creator-styles.css">
+    <link rel="stylesheet" href="manage-styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+</head>
+<body>
+    <script>
+        // Check authentication before loading the page
+        if (!window.AuthManager || !window.AuthManager.requireAuth()) {
+            // Redirect will happen in auth.js
+        }
+    </script>
+    <header class="header">
+        <div class="container">
+            <h1 class="logo">
+                <a href="index.html">MicroPinouts</a>
+            </h1>
+            <div class="header-actions">
+                <a href="manage-pinouts.html" class="btn btn-secondary">Manage Pinouts</a>
+                <button id="logoutBtn" class="btn btn-primary">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="creator-layout">
+                <!-- Left Panel: Configuration -->
+                <div class="config-panel">
+                    <h2>Pinout Configuration</h2>
+                    
+                    <!-- Basic Settings -->
+                    <div class="config-section">
+                        <h3>Basic Settings</h3>
+                        <div class="form-group">
+                            <label for="chipName">Chip Name:</label>
+                            <input type="text" id="chipName" placeholder="e.g., ATmega328P" value="Custom Chip">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="chipCategory">Category:</label>
+                            <select id="chipCategory">
+                                <option value="microcontroller-8bit">Microcontroller (8-bit)</option>
+                                <option value="microcontroller-16bit">Microcontroller (16-bit)</option>
+                                <option value="microcontroller-32bit">Microcontroller (32-bit)</option>
+                                <option value="development-board">Development Board</option>
+                                <option value="sensor-module">Sensor & Module</option>
+                                <option value="communication-ic">Communication IC</option>
+                                <option value="power-management">Power Management</option>
+                                <option value="memory-storage">Memory & Storage</option>
+                                <option value="custom-other">Custom/Other</option>
+                            </select>
+                            <small class="form-help">Select the category that best describes your component</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="datasheetLink">Datasheet Link:</label>
+                            <input type="url" id="datasheetLink" placeholder="https://example.com/datasheet.pdf">
+                            <small class="form-help">Link to the official datasheet or documentation</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="symmetricPins" checked>
+                                Same pin count L/R
+                            </label>
+                        </div>
+                        
+                        <div class="form-group" id="totalPinGroup">
+                            <label for="pinCount">Total Pin Count:</label>
+                            <select id="pinCount">
+                                <option value="8">8 pins</option>
+                                <option value="14">14 pins</option>
+                                <option value="16">16 pins</option>
+                                <option value="18">18 pins</option>
+                                <option value="20">20 pins</option>
+                                <option value="24">24 pins</option>
+                                <option value="28">28 pins</option>
+                                <option value="32">32 pins</option>
+                                <option value="36">36 pins</option>
+                                <option value="38">38 pins</option>
+                                <option value="40">40 pins</option>
+                                <option value="44">44 pins</option>
+                                <option value="48">48 pins</option>
+                                <option value="52">52 pins</option>
+                                <option value="56">56 pins</option>
+                                <option value="60">60 pins</option>
+                                <option value="64">64 pins</option>
+                                <option value="68">68 pins</option>
+                                <option value="72">72 pins</option>
+                                <option value="80">80 pins</option>
+                                <option value="84">84 pins</option>
+                                <option value="100">100 pins</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" id="asymmetricPinGroup" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-col">
+                                    <label for="leftPinCount">Left Side Pins:</label>
+                                    <select id="leftPinCount">
+                                        <option value="8">8 pins</option>
+                                        <option value="10">10 pins</option>
+                                        <option value="12">12 pins</option>
+                                        <option value="14">14 pins</option>
+                                        <option value="16">16 pins</option>
+                                        <option value="18">18 pins</option>
+                                        <option value="20">20 pins</option>
+                                        <option value="24">24 pins</option>
+                                        <option value="28">28 pins</option>
+                                        <option value="32">32 pins</option>
+                                        <option value="36">36 pins</option>
+                                        <option value="38">38 pins</option>
+                                        <option value="40">40 pins</option>
+                                        <option value="44">44 pins</option>
+                                        <option value="48">48 pins</option>
+                                        <option value="52">52 pins</option>
+                                        <option value="56">56 pins</option>
+                                        <option value="60">60 pins</option>
+                                        <option value="64">64 pins</option>
+                                        <option value="68">68 pins</option>
+                                        <option value="72">72 pins</option>
+                                        <option value="80">80 pins</option>
+                                        <option value="84">84 pins</option>
+                                        <option value="100">100 pins</option>
+                                    </select>
+                                </div>
+                                <div class="form-col">
+                                    <label for="rightPinCount">Right Side Pins:</label>
+                                    <select id="rightPinCount">
+                                        <option value="8">8 pins</option>
+                                        <option value="10">10 pins</option>
+                                        <option value="12">12 pins</option>
+                                        <option value="14">14 pins</option>
+                                        <option value="16">16 pins</option>
+                                        <option value="18">18 pins</option>
+                                        <option value="20">20 pins</option>
+                                        <option value="24">24 pins</option>
+                                        <option value="28">28 pins</option>
+                                        <option value="32">32 pins</option>
+                                        <option value="36">36 pins</option>
+                                        <option value="38">38 pins</option>
+                                        <option value="40">40 pins</option>
+                                        <option value="44">44 pins</option>
+                                        <option value="48">48 pins</option>
+                                        <option value="52">52 pins</option>
+                                        <option value="56">56 pins</option>
+                                        <option value="60">60 pins</option>
+                                        <option value="64">64 pins</option>
+                                        <option value="68">68 pins</option>
+                                        <option value="72">72 pins</option>
+                                        <option value="80">80 pins</option>
+                                        <option value="84">84 pins</option>
+                                        <option value="100">100 pins</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="boardHeight">Board/Chip Height (mm):</label>
+                            <input type="number" id="boardHeight" min="5" max="100" value="20" placeholder="e.g., 20">
+                            <small class="form-help">Physical height of the board or chip in millimeters</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="boardWidth">Board/Chip Width (mm):</label>
+                            <input type="number" id="boardWidth" min="10" max="200" value="50" placeholder="e.g., 50">
+                            <small class="form-help">Physical width of the board or chip in millimeters</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="pinNumberColor">Pin Number Color:</label>
+                            <input type="color" id="pinNumberColor" value="#2c3e50">
+                            <small class="form-help">Color for the pin numbers inside the chip body</small>
+                        </div>
+                    </div>
+
+                    <!-- Background Settings -->
+                    <div class="config-section">
+                        <h3>Background</h3>
+                        <div class="form-group">
+                            <label for="backgroundType">Background Type:</label>
+                            <select id="backgroundType">
+                                <option value="default">Default Chip Body</option>
+                                <option value="image">Custom Image</option>
+                                <option value="none">None</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" id="imageUploadGroup" style="display: none;">
+                            <label for="backgroundImage">Upload Image:</label>
+                            <input type="file" id="backgroundImage" accept="image/*">
+                        </div>
+                        
+                        <div class="form-group" id="imageUrlGroup" style="display: none;">
+                            <label for="imageUrl">Image URL:</label>
+                            <input type="url" id="imageUrl" placeholder="https://example.com/chip-image.png">
+                        </div>
+                        
+                        <div class="form-group" id="imagePositionGroup" style="display: none;">
+                            <h4>Image Position</h4>
+                            <div class="form-row">
+                                <div class="form-col">
+                                    <label for="imageOffsetX">X Offset (px):</label>
+                                    <input type="number" id="imageOffsetX" min="-200" max="200" value="0" placeholder="0">
+                                    <small class="form-help">Horizontal offset</small>
+                                </div>
+                                <div class="form-col">
+                                    <label for="imageOffsetY">Y Offset (px):</label>
+                                    <input type="number" id="imageOffsetY" min="-200" max="200" value="0" placeholder="0">
+                                    <small class="form-help">Vertical offset</small>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-col">
+                                    <label for="imageScaleX">Width (px):</label>
+                                    <input type="number" id="imageScaleX" min="50" max="800" value="300" placeholder="300">
+                                    <small class="form-help">Image width in pixels</small>
+                                </div>
+                                <div class="form-col">
+                                    <label for="imageScaleY">Height (px):</label>
+                                    <input type="number" id="imageScaleY" min="50" max="800" value="300" placeholder="300">
+                                    <small class="form-help">Image height in pixels</small>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-col">
+                                    <button type="button" id="resetImagePosition" class="btn btn-secondary">Reset Position</button>
+                                </div>
+                                <div class="form-col">
+                                    <button type="button" id="resetImageScale" class="btn btn-secondary">Reset Scale</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pin Configuration -->
+                    <div class="config-section">
+                        <h3>Pin Configuration</h3>
+                        <div class="pin-list" id="pinList">
+                            <!-- Pins will be generated dynamically -->
+                        </div>
+                        <button type="button" id="addPin" class="btn btn-secondary">
+                            <i class="fas fa-plus"></i> Add Pin
+                        </button>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="config-section">
+                        <h3>Actions</h3>
+                        <button type="button" id="updatePreview" class="btn btn-primary">
+                            <i class="fas fa-eye"></i> Update Preview
+                        </button>
+                        <button type="button" id="previewPinout" class="btn btn-info">
+                            <i class="fas fa-eye"></i> Preview Pinout
+                        </button>
+                        <button type="button" id="publishPinout" class="btn btn-success">
+                            <i class="fas fa-globe"></i> Publish Pinout
+                        </button>
+                        <button type="button" id="downloadSVG" class="btn btn-info">
+                            <i class="fas fa-download"></i> Download as SVG
+                        </button>
+                        <button type="button" id="saveTemplate" class="btn btn-secondary">
+                            <i class="fas fa-save"></i> Save Template
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Preview -->
+                <div class="preview-panel">
+                    <h2>Preview</h2>
+                    <div class="preview-container">
+                        <div class="chip-diagram custom-pinout" id="previewContainer">
+                            <!-- Preview will be generated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Editor Panel -->
+            <div class="content-editor-panel">
+                <h2>Page Content Editor</h2>
+                <div class="content-editor-container">
+                    <div class="form-group">
+                        <label for="pageTitle">Page Title:</label>
+                        <input type="text" id="pageTitle" placeholder="e.g., PIC16F84A Pinout Diagram - Complete Guide" value="Custom Pinout Diagram">
+                        <small class="form-help">SEO-friendly title for the generated page</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="pageSlug">URL Slug:</label>
+                        <input type="text" id="pageSlug" placeholder="e.g., pic16f84a" value="">
+                        <small class="form-help">URL-friendly identifier for the pinout page (auto-generated from title)</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="metaDescription">Meta Description:</label>
+                        <textarea id="metaDescription" rows="3" placeholder="Brief description for search engines..."></textarea>
+                        <small class="form-help">Short description that appears in search results</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Page Content:</label>
+                        <div id="richTextEditor" style="height: 300px;"></div>
+                        <small class="form-help">Rich text content for the pinout page (introduction, features, etc.)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 MicroPinouts. Interactive microcontroller pinout diagrams.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    <script src="auth.js"></script>
+    <script src="creator.js"></script>
+    <script>
+        // Set up logout button
+        document.addEventListener('DOMContentLoaded', function() {
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function() {
+                    if (window.authManager) {
+                        window.authManager.logout();
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

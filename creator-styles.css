@@ -1,0 +1,600 @@
+/* Pinout Creator Styles */
+
+.creator-layout {
+    display: grid !important;
+    grid-template-columns: 400px 1fr !important;
+    gap: 2rem;
+    min-height: calc(100vh - 200px);
+    width: 100%;
+    align-items: start;
+}
+
+/* Flexbox fallback for older browsers */
+@supports not (display: grid) {
+    .creator-layout {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+    }
+    
+    .config-panel {
+        width: 400px;
+        flex-shrink: 0;
+    }
+    
+    .preview-panel {
+        flex: 1;
+    }
+}
+
+/* Configuration Panel */
+.config-panel {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    height: fit-content;
+    position: sticky;
+    top: 2rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+}
+
+.config-panel h2 {
+    margin: 0 0 1.5rem 0;
+    color: #2c3e50;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 0.5rem;
+}
+
+.config-section {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.config-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.config-section h3 {
+    margin: 0 0 1rem 0;
+    color: #34495e;
+    font-size: 1.1rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e9ecef;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.form-help {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.8rem;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+}
+
+.form-col {
+    flex: 1;
+}
+
+.form-col label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.form-col select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e9ecef;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.form-col select:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+    cursor: pointer;
+}
+
+/* Pin List */
+.pin-list {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 0.5rem;
+    background: white;
+}
+
+.pin-item {
+    display: grid;
+    grid-template-columns: 60px 1fr 120px 40px;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.5rem;
+    border-bottom: 1px solid #f1f3f4;
+    background: white;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+}
+
+.pin-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.pin-number {
+    font-weight: bold;
+    text-align: center;
+    background: #ecf0f1;
+    padding: 0.25rem;
+    border-radius: 3px;
+    font-size: 0.9rem;
+}
+
+.pin-name-input {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-size: 0.9rem;
+}
+
+.pin-type-select {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-size: 0.9rem;
+    background: white;
+}
+
+.remove-pin {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background-color 0.3s ease;
+}
+
+.remove-pin:hover {
+    background: #c0392b;
+}
+
+/* Pin Type Colors */
+.pin-type-power { background: #e74c3c; color: white; }
+.pin-type-gnd { background: #2c3e50; color: white; }
+.pin-type-gpio { background: #27ae60; color: white; }
+.pin-type-data { background: #3498db; color: white; }
+.pin-type-clock { background: #9b59b6; color: white; }
+.pin-type-analog { background: #f39c12; color: white; }
+.pin-type-reset { background: #e67e22; color: white; }
+.pin-type-special { background: #e67e22; color: white; }
+.pin-type-other { background: #95a5a6; color: white; }
+
+/* Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2980b9;
+    transform: translateY(-1px);
+}
+
+.btn-success {
+    background: #27ae60;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #229954;
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+    transform: translateY(-1px);
+}
+
+/* Preview Panel */
+.preview-panel {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    height: fit-content;
+    position: sticky;
+    top: 2rem;
+    display: block;
+    float: none;
+    clear: none;
+}
+
+/* Preview Category Indicator */
+.preview-category-indicator {
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.category-badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.category-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.preview-panel h2 {
+    margin: 0 0 1.5rem 0;
+    color: #2c3e50;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 0.5rem;
+}
+
+.preview-container {
+    border: 2px dashed #bdc3c7;
+    border-radius: 8px;
+    padding: 2rem;
+    min-height: 500px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+}
+
+.preview-container .chip-diagram {
+    margin: 0;
+    box-shadow: none;
+    border: none;
+}
+
+/* Custom Pinout Styles */
+.custom-pinout {
+    --pin-count: 16;
+    --chip-height: 400px;
+    --pin-spacing: calc(var(--chip-height) / var(--pin-count));
+}
+
+.custom-pinout .pin-column {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: var(--chip-height);
+    padding: 8px 0; /* Small space at top and bottom so pins aren't on the edge */
+    min-height: 400px; /* Minimum height for very small pin counts */
+}
+
+.custom-pinout .chip-body {
+    height: var(--chip-height);
+    width: 200px;
+    background: #ecf0f1;
+    border: 2px solid #bdc3c7;
+    border-radius: 8px;
+    position: relative;
+}
+
+/* Hide chip-body pseudo-elements for all pinouts */
+.chip-body::before,
+.chip-body::after {
+    display: none !important; /* Hide both ::before and ::after pseudo-elements */
+}
+
+.custom-pinout .chip-body::before,
+.custom-pinout .chip-body::after {
+    display: none; /* Hide both ::before and ::after pseudo-elements */
+}
+
+.custom-pinout .pin {
+    margin: 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    overflow: visible;
+    flex: 1;
+}
+
+.custom-pinout .pin::before {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 8px;
+    background: #7f8c8d;
+    border-radius: 2px;
+}
+
+.left-pins .pin::before {
+    right: -4px;
+}
+
+.right-pins .pin::before {
+    left: -4px;
+}
+
+.custom-pinout .pin-num {
+    position: absolute;
+    font-size: 12px;
+    font-weight: bold;
+    color: #2c3e50;
+    transform: translateY(-50%);
+}
+
+.pin-numbers-left .pin-num {
+    left: 2px;
+}
+
+.pin-numbers-right .pin-num {
+    right: 2px;
+}
+
+.custom-pinout .pin-label {
+    font-size: 14px;     /* px, not rem */
+    line-height: 14px;   /* lock line-height */
+    white-space: nowrap; /* no wrapping that changes row height */
+    padding: 0.2rem 0.4rem;
+    min-width: 50px;
+    text-align: center;
+    border-radius: 3px;
+    font-weight: 600;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Position pin labels correctly for left and right sides */
+.left-pins .pin-label {
+    right: 10px; /* Position closer to the gray pin rectangle */
+    text-align: right;
+}
+
+.right-pins .pin-label {
+    left: 10px; /* Position closer to the gray pin rectangle */
+    text-align: left;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .creator-layout {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .config-panel {
+        position: static;
+        order: 2;
+    }
+    
+    .preview-panel {
+        order: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .pin-item {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    
+    .pin-number {
+        text-align: left;
+    }
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+        margin-right: 0;
+    }
+}
+
+/* Loading States */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    color: #7f8c8d;
+    padding: 2rem;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.empty-state h3 {
+    margin: 0 0 0.5rem 0;
+    color: #95a5a6;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* Content Editor Panel */
+.content-editor-panel {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-top: 2rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.content-editor-panel h2 {
+    color: #2d3748;
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+    border-bottom: 2px solid #667eea;
+    padding-bottom: 0.5rem;
+}
+
+.content-editor-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.content-editor-container .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.content-editor-container label {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 0.9rem;
+}
+
+.content-editor-container input,
+.content-editor-container textarea {
+    padding: 0.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: border-color 0.3s ease;
+    background: white;
+}
+
+.content-editor-container input:focus,
+.content-editor-container textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.content-editor-container .form-help {
+    color: #718096;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+/* Quill Editor Styling */
+.ql-toolbar {
+    border: 2px solid #e2e8f0 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    border-radius: 6px 6px 0 0 !important;
+}
+
+.ql-container {
+    border: 2px solid #e2e8f0 !important;
+    border-top: none !important;
+    border-radius: 0 0 6px 6px !important;
+    font-size: 0.9rem;
+}
+
+.ql-editor {
+    min-height: 250px;
+    padding: 1rem;
+}
+
+.ql-editor.ql-blank::before {
+    color: #a0aec0;
+    font-style: italic;
+}

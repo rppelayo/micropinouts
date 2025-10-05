@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arduino Pro Mini - SVG Pinout</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="pinout-styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/snap.svg/0.5.1/snap.svg-min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="content-grid">
+            <div class="pinout-section">
+                <div class="section-header">
+                    <h2>Arduino Pro Mini</h2>
+                    <p class="section-subtitle">24-pin Development Board - ATmega328P Microcontroller</p>
+                    <p style="font-size: 0.875rem; color: #666; margin-top: 0.5rem;">
+                        💡 Using Snap.svg for better SVG manipulation
+                    </p>
+                    <div style="margin-top: 1rem;">
+                        <button id="toggleLinesBtn" class="btn btn-secondary">
+                            Hide Connecting Lines
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="chip-diagram arduino-pro-mini-pinout">
+                    <div id="svg-container" style="width: 100%; height: 400px; position: relative;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Pin data with positions
+        const pinData = {
+            1: { name: 'TXO', x: 200, y: 80, type: 'output' },
+            2: { name: 'RXI', x: 200, y: 110, type: 'input' },
+            3: { name: 'RST', x: 200, y: 140, type: 'input' },
+            4: { name: 'GND', x: 200, y: 170, type: 'power' },
+            5: { name: '2', x: 200, y: 200, type: 'gpio' },
+            6: { name: '3', x: 200, y: 230, type: 'gpio' },
+            7: { name: '4', x: 200, y: 260, type: 'gpio' },
+            8: { name: '5', x: 200, y: 290, type: 'gpio' },
+            9: { name: '6', x: 200, y: 320, type: 'gpio' },
+            10: { name: '7', x: 200, y: 350, type: 'gpio' },
+            11: { name: '8', x: 200, y: 380, type: 'gpio' },
+            12: { name: '9', x: 200, y: 410, type: 'gpio' },
+            13: { name: '10', x: 200, y: 440, type: 'gpio' },
+            14: { name: '11', x: 200, y: 470, type: 'gpio' },
+            15: { name: '12', x: 200, y: 500, type: 'gpio' },
+            16: { name: '13', x: 200, y: 530, type: 'gpio' },
+            17: { name: 'VCC', x: 400, y: 80, type: 'power' },
+            18: { name: 'A0', x: 400, y: 110, type: 'analog' },
+            19: { name: 'A1', x: 400, y: 140, type: 'analog' },
+            20: { name: 'A2', x: 400, y: 170, type: 'analog' },
+            21: { name: 'A3', x: 400, y: 200, type: 'analog' },
+            22: { name: 'A4', x: 400, y: 230, type: 'analog' },
+            23: { name: 'A5', x: 400, y: 260, type: 'analog' },
+            24: { name: 'A6', x: 400, y: 290, type: 'analog' },
+            25: { name: 'A7', x: 400, y: 320, type: 'analog' },
+            26: { name: 'RAW', x: 400, y: 350, type: 'power' },
+            27: { name: 'GND', x: 400, y: 380, type: 'power' },
+            28: { name: 'RST', x: 400, y: 410, type: 'input' },
+            29: { name: 'VCC', x: 400, y: 440, type: 'power' },
+            30: { name: 'GND', x: 400, y: 470, type: 'power' },
+            31: { name: 'RXI', x: 400, y: 500, type: 'input' },
+            32: { name: 'TXO', x: 400, y: 530, type: 'output' }
+        };
+
+        let showLines = true;
+        let snap, boardSvg, linesGroup, labelsGroup;
+
+        // Initialize the SVG pinout
+        function initSVGPinout() {
+            const container = document.getElementById('svg-container');
+            snap = Snap(container);
+            
+            // Load the Arduino Pro Mini SVG
+            Snap.load('http://localhost:8000/boards/Arduino-Pro-Mini_breadboard.svg', function(fragment) {
+                boardSvg = fragment;
+                snap.append(boardSvg);
+                
+                // Create groups for lines and labels
+                linesGroup = snap.group();
+                labelsGroup = snap.group();
+                
+                // Create pin labels and connecting lines
+                createPinLabels();
+                if (showLines) {
+                    createConnectingLines();
+                }
+            });
+        }
+
+        // Create pin labels
+        function createPinLabels() {
+            Object.keys(pinData).forEach(pinNum => {
+                const pin = pinData[pinNum];
+                const labelX = pin.x < 300 ? 50 : 550; // Left or right side
+                
+                // Create label background
+                const labelBg = snap.rect(labelX - 25, pin.y - 10, 50, 20, 5);
+                labelBg.attr({
+                    fill: getPinColor(pin.type),
+                    stroke: '#333',
+                    strokeWidth: 1
+                });
+                
+                // Create label text
+                const labelText = snap.text(labelX, pin.y, pin.name);
+                labelText.attr({
+                    fill: '#fff',
+                    fontSize: '12px',
+                    textAnchor: 'middle',
+                    dominantBaseline: 'middle'
+                });
+                
+                // Group label elements
+                const labelGroup = snap.group(labelBg, labelText);
+                labelGroup.attr({
+                    cursor: 'pointer'
+                });
+                
+                // Add click handler
+                labelGroup.click(() => {
+                    console.log(`Pin ${pinNum}: ${pin.name}`);
+                });
+                
+                labelsGroup.add(labelGroup);
+            });
+        }
+
+        // Create connecting lines
+        function createConnectingLines() {
+            Object.keys(pinData).forEach(pinNum => {
+                const pin = pinData[pinNum];
+                const labelX = pin.x < 300 ? 50 : 550;
+                
+                const line = snap.line(pin.x, pin.y, labelX, pin.y);
+                line.attr({
+                    stroke: '#e53e3e',
+                    strokeWidth: 3,
+                    opacity: 0.8
+                });
+                
+                linesGroup.add(line);
+            });
+        }
+
+        // Get pin color based on type
+        function getPinColor(type) {
+            const colors = {
+                'power': '#4a5568',
+                'gpio': '#3182ce',
+                'analog': '#38a169',
+                'input': '#d69e2e',
+                'output': '#e53e3e'
+            };
+            return colors[type] || '#666';
+        }
+
+        // Toggle connecting lines
+        function toggleLines() {
+            showLines = !showLines;
+            if (showLines) {
+                createConnectingLines();
+                document.getElementById('toggleLinesBtn').textContent = 'Hide Connecting Lines';
+            } else {
+                linesGroup.clear();
+                document.getElementById('toggleLinesBtn').textContent = 'Show Connecting Lines';
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initSVGPinout();
+            
+            // Setup event listeners
+            document.getElementById('toggleLinesBtn').addEventListener('click', toggleLines);
+            
+            console.log('Arduino Pro Mini SVG Pinout loaded with Snap.svg!');
+        });
+    </script>
+</body>
+</html>
