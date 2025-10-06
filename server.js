@@ -72,6 +72,15 @@ function initializeDatabase() {
     }
   });
 
+  // Add slug column if it doesn't exist
+  db.run(`ALTER TABLE boards ADD COLUMN slug TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding slug column:', err);
+    } else {
+      console.log('slug column added successfully');
+    }
+  });
+
   // Pin groups table
   db.run(`CREATE TABLE IF NOT EXISTS pin_groups (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -137,6 +146,47 @@ function initializeDatabase() {
 
   // Insert sample Arduino UNO data
   insertArduinoUnoData();
+  
+  // Generate slugs for existing boards
+  generateSlugsForExistingBoards();
+}
+
+// Generate slugs for existing boards that don't have them
+function generateSlugsForExistingBoards() {
+  db.all("SELECT id, name FROM boards WHERE slug IS NULL OR slug = ''", (err, rows) => {
+    if (err) {
+      console.error('Error fetching boards without slugs:', err);
+      return;
+    }
+    
+    if (rows.length === 0) {
+      console.log('All boards already have slugs');
+      return;
+    }
+    
+    console.log(`Generating slugs for ${rows.length} boards...`);
+    
+    rows.forEach(row => {
+      const slug = generateSlug(row.name);
+      db.run("UPDATE boards SET slug = ? WHERE id = ?", [slug, row.id], (err) => {
+        if (err) {
+          console.error(`Error updating slug for board ${row.id}:`, err);
+        } else {
+          console.log(`Generated slug "${slug}" for board "${row.name}"`);
+        }
+      });
+    });
+  });
+}
+
+// Generate a URL-friendly slug from a board name
+function generateSlug(name) {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+    .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
 }
 
 // Insert Arduino UNO sample data
@@ -154,9 +204,9 @@ function insertArduinoUnoData() {
     }
 
     // Insert Arduino UNO board
-    db.run(`INSERT INTO boards (name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ['Arduino UNO', 'Popular microcontroller board based on ATmega328P', 'Arduino', 'DIP', 28, '5V', '16 MHz', '32 KB', '2 KB', '/images/arduino-uno.png'],
+    db.run(`INSERT INTO boards (name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, slug) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ['Arduino UNO', 'Popular microcontroller board based on ATmega328P', 'Arduino', 'DIP', 28, '5V', '16 MHz', '32 KB', '2 KB', '/images/arduino-uno.png', 'arduino-uno'],
       function(err) {
         if (err) {
           console.error('Error inserting Arduino UNO:', err);

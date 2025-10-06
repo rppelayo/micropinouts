@@ -10,6 +10,16 @@ const sqlite3 = require('sqlite3').verbose();
 
 const router = express.Router();
 
+// Generate a URL-friendly slug from a board name
+function generateSlug(name) {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+    .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+}
+
 // Rate limiting for admin routes
 const adminLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -135,12 +145,13 @@ router.post('/boards', verifyAdminToken, (req, res) => {
     image_url
   } = req.body;
 
+  const slug = generateSlug(name);
   const db = new sqlite3.Database('./database.sqlite');
   
   db.run(`
-    INSERT INTO boards (name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url], 
+    INSERT INTO boards (name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, slug)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, slug], 
   function(err) {
     if (err) {
       console.error('Error creating board:', err);
@@ -148,6 +159,7 @@ router.post('/boards', verifyAdminToken, (req, res) => {
     } else {
       res.json({ 
         id: this.lastID,
+        slug: slug,
         message: 'Board created successfully'
       });
     }
@@ -171,14 +183,15 @@ router.put('/boards/:id', verifyAdminToken, (req, res) => {
     image_url
   } = req.body;
 
+  const slug = generateSlug(name);
   const db = new sqlite3.Database('./database.sqlite');
   
   db.run(`
     UPDATE boards 
     SET name = ?, description = ?, manufacturer = ?, package_type = ?, pin_count = ?, 
-        voltage_range = ?, clock_speed = ?, flash_memory = ?, ram = ?, image_url = ?
+        voltage_range = ?, clock_speed = ?, flash_memory = ?, ram = ?, image_url = ?, slug = ?
     WHERE id = ?
-  `, [name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, boardId], 
+  `, [name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, slug, boardId], 
   function(err) {
     if (err) {
       console.error('Error updating board:', err);
@@ -186,7 +199,10 @@ router.put('/boards/:id', verifyAdminToken, (req, res) => {
     } else if (this.changes === 0) {
       res.status(404).json({ error: 'Board not found' });
     } else {
-      res.json({ message: 'Board updated successfully' });
+      res.json({ 
+        message: 'Board updated successfully',
+        slug: slug
+      });
     }
     db.close();
   });
@@ -373,11 +389,13 @@ router.post('/boards/from-fritzing', verifyAdminToken, async (req, res) => {
     
     // Create the board
     const svgContent = fritzingData.displaySVG || null;
+    const slug = generateSlug(boardData.name);
     console.log('Storing SVG content length:', svgContent ? svgContent.length : 0);
+    console.log('Generated slug:', slug);
     
     db.run(`
-      INSERT INTO boards (name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, svg_content)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO boards (name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, svg_content, slug)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       boardData.name,
       boardData.description,
@@ -389,7 +407,8 @@ router.post('/boards/from-fritzing', verifyAdminToken, async (req, res) => {
       boardData.flash_memory,
       boardData.ram,
       boardData.image_url,
-      svgContent
+      svgContent,
+      slug
     ], function(err) {
       if (err) {
         console.error('Error creating board:', err);
@@ -455,6 +474,7 @@ router.post('/boards/from-fritzing', verifyAdminToken, async (req, res) => {
             res.json({
               message: 'Board created successfully from Fritzing data',
               boardId: boardId,
+              slug: slug,
               pinCount: fritzingData.pins.length
             });
             db.close();
