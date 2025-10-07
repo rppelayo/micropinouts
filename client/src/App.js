@@ -7,6 +7,8 @@ import BoardDetail from './pages/BoardDetail';
 import EditBoard from './pages/EditBoard';
 import Admin from './pages/Admin';
 import CompareBoards from './pages/CompareBoards';
+import WiringGuides from './pages/WiringGuides';
+import WiringGuide from './pages/WiringGuide';
 import './styles/App.css';
 
 function App() {
@@ -21,6 +23,8 @@ function App() {
               <Route path="/board/:id" element={<BoardDetail />} />
               <Route path="/boards/:id" element={<BoardDetail />} />
               <Route path="/compare" element={<CompareBoards />} />
+              <Route path="/wiring-guides" element={<WiringGuides />} />
+              <Route path="/wiring-guide/:slug" element={<WiringGuide />} />
               <Route path="/admin/boards/:id/edit" element={<EditBoard />} />
               <Route path="/admin" element={<Admin />} />
             </Routes>

@@ -382,6 +382,26 @@ const BoardInfoInput = styled.input`
   }
 `;
 
+const BoardInfoSelect = styled.select`
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+  background: white;
+  
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  
+  &:disabled {
+    background: #f9fafb;
+    color: #6b7280;
+  }
+`;
+
 const BoardInfoTextArea = styled.textarea`
   padding: 12px;
   border: 1px solid #d1d5db;
@@ -534,6 +554,7 @@ const EditBoard = () => {
   const [board, setBoard] = useState(null);
   const [pins, setPins] = useState([]);
   const [pinGroups, setPinGroups] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -555,25 +576,29 @@ const EditBoard = () => {
           'Content-Type': 'application/json'
         };
 
-        const [boardResponse, pinsResponse, groupsResponse] = await Promise.all([
+        const [boardResponse, pinsResponse, groupsResponse, categoriesResponse] = await Promise.all([
           fetch(`/api/admin/boards/${id}`, { headers }).then(res => res.json()),
           fetch(`/api/admin/boards/${id}/pins`, { headers }).then(res => res.json()),
-          fetch(`/api/admin/pin-groups`, { headers }).then(res => res.json())
+          fetch(`/api/admin/pin-groups`, { headers }).then(res => res.json()),
+          fetch(`/api/admin/categories`, { headers }).then(res => res.json())
         ]);
         
         // Extract data from API responses
         const boardData = boardResponse.data || boardResponse;
         const pinsData = pinsResponse.data || pinsResponse;
         const groupsData = groupsResponse.data || groupsResponse;
+        const categoriesData = categoriesResponse.data || categoriesResponse;
         
         console.log('Board data:', boardData);
         console.log('Pins data:', pinsData);
         console.log('Groups data:', groupsData);
+        console.log('Categories data:', categoriesData);
         console.log('Board SVG content:', boardData?.svg_content ? 'Present' : 'Missing');
         
         setBoard(boardData);
         setPins(Array.isArray(pinsData) ? pinsData : []);
         setPinGroups(Array.isArray(groupsData) ? groupsData : []);
+        setCategories(Array.isArray(categoriesData) ? categoriesData : []);
       } catch (err) {
         setError('Failed to load board data');
         console.error('Error fetching data:', err);
@@ -877,6 +902,29 @@ const EditBoard = () => {
               />
             ) : (
               <BoardInfoDisplay>{board.package_type || 'Not specified'}</BoardInfoDisplay>
+            )}
+          </BoardInfoField>
+
+          <BoardInfoField>
+            <BoardInfoLabel>Category</BoardInfoLabel>
+            {editingBoard ? (
+              <BoardInfoSelect
+                value={board.category || ''}
+                onChange={(e) => handleBoardUpdate('category', e.target.value)}
+              >
+                <option value="">Select a category...</option>
+                {categories.map(category => (
+                  <option key={category.key} value={category.key}>
+                    {category.icon} {category.name}
+                  </option>
+                ))}
+              </BoardInfoSelect>
+            ) : (
+              <BoardInfoDisplay>
+                {board.category ? (
+                  categories.find(cat => cat.key === board.category)?.name || board.category
+                ) : 'Not specified'}
+              </BoardInfoDisplay>
             )}
           </BoardInfoField>
 

@@ -90,6 +90,57 @@ function initializeDatabase() {
     }
   });
 
+  // Add category column if it doesn't exist
+  db.run(`ALTER TABLE boards ADD COLUMN category TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding category column:', err);
+    } else {
+      console.log('category column added successfully');
+    }
+  });
+
+  // Add description column to wiring_guides if it doesn't exist
+  db.run(`ALTER TABLE wiring_guides ADD COLUMN description TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding description column to wiring_guides:', err);
+    } else {
+      console.log('description column added to wiring_guides successfully');
+    }
+  });
+
+  // Add slug column to wiring_guides if it doesn't exist
+  db.run(`ALTER TABLE wiring_guides ADD COLUMN slug TEXT UNIQUE`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding slug column to wiring_guides:', err);
+    } else {
+      console.log('slug column added to wiring_guides successfully');
+    }
+  });
+
+  // Add published column to wiring_guides if it doesn't exist
+  db.run(`ALTER TABLE wiring_guides ADD COLUMN published BOOLEAN DEFAULT 0`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding published column to wiring_guides:', err);
+    } else {
+      console.log('published column added to wiring_guides successfully');
+    }
+  });
+
+  // Wiring guides table
+  db.run(`CREATE TABLE IF NOT EXISTS wiring_guides (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sensor_board_id INTEGER NOT NULL,
+    microcontroller_board_id INTEGER NOT NULL,
+    connections TEXT NOT NULL,
+    svg_content TEXT,
+    description TEXT,
+    slug TEXT UNIQUE,
+    published BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (sensor_board_id) REFERENCES boards (id),
+    FOREIGN KEY (microcontroller_board_id) REFERENCES boards (id)
+  )`);
+
   // Pin groups table
   db.run(`CREATE TABLE IF NOT EXISTS pin_groups (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

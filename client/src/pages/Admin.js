@@ -14,7 +14,10 @@ import {
   EyeOff,
   Settings,
   Cpu,
-  Zap
+  Zap,
+  Link,
+  FileText,
+  Globe
 } from 'lucide-react';
 
 // Define keyframes at the top level
@@ -736,6 +739,990 @@ const SkeletonButton = styled.div`
   flex: 1;
 `;
 
+const WiringGuideContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+`;
+
+const WiringStep = styled.div`
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+`;
+
+const StepTitle = styled.h3`
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const BoardSelector = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const SelectorGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const SelectorLabel = styled.label`
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+`;
+
+const BoardSelect = styled.select`
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 16px;
+  background: white;
+  
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+  }
+`;
+
+const ConnectionGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 16px;
+  align-items: center;
+  margin-top: 24px;
+`;
+
+const PinSelector = styled.select`
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+  }
+`;
+
+const ConnectionArrow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  font-size: 18px;
+`;
+
+const ConnectionRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 16px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const AddConnectionButton = styled.button`
+  padding: 8px 16px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 16px;
+  
+  &:hover {
+    background: #2563eb;
+  }
+`;
+
+const RemoveConnectionButton = styled.button`
+  padding: 4px 8px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: #dc2626;
+  }
+`;
+
+const GenerateButton = styled.button`
+  padding: 12px 24px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 24px;
+  
+  &:hover {
+    background: #059669;
+  }
+  
+  &:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+  }
+`;
+
+const WiringGuideContent = () => {
+  const [sensorBoards, setSensorBoards] = useState([]);
+  const [microcontrollerBoards, setMicrocontrollerBoards] = useState([]);
+  const [selectedSensor, setSelectedSensor] = useState('');
+  const [selectedMicrocontroller, setSelectedMicrocontroller] = useState('');
+  const [sensorPins, setSensorPins] = useState([]);
+  const [microcontrollerPins, setMicrocontrollerPins] = useState([]);
+  const [connections, setConnections] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [generatedSVG, setGeneratedSVG] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
+  const [description, setDescription] = useState('');
+  const [currentWiringGuide, setCurrentWiringGuide] = useState(null);
+  
+  // Pan/Zoom state
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    fetchBoards();
+  }, []);
+
+  const fetchBoards = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      
+      // Fetch sensor boards
+      const sensorResponse = await fetch('/api/admin/wiring-guide/boards?category=sensor-module', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      // Fetch microcontroller boards
+      const microcontrollerResponse = await fetch('/api/admin/wiring-guide/boards?category=microcontroller-8bit,microcontroller-16bit,microcontroller-32bit,development-board', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (sensorResponse.ok && microcontrollerResponse.ok) {
+        const sensors = await sensorResponse.json();
+        const microcontrollers = await microcontrollerResponse.json();
+        
+        setSensorBoards(sensors);
+        setMicrocontrollerBoards(microcontrollers);
+      } else {
+        // Fallback to old method if new API fails
+        const response = await fetch('/api/admin/boards', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const boards = await response.json();
+          
+          // Filter boards by category field or fallback to name-based heuristics
+          const sensors = boards.filter(board => 
+            board.category === 'sensor-module' ||
+            board.name.toLowerCase().includes('sensor') || 
+            board.name.toLowerCase().includes('module') ||
+            board.name.toLowerCase().includes('shield')
+          );
+          
+          const microcontrollers = boards.filter(board => 
+            ['microcontroller-8bit', 'microcontroller-16bit', 'microcontroller-32bit', 'development-board'].includes(board.category) ||
+            board.name.toLowerCase().includes('arduino') ||
+            board.name.toLowerCase().includes('esp') ||
+            board.name.toLowerCase().includes('raspberry') ||
+            board.name.toLowerCase().includes('microcontroller') ||
+            board.name.toLowerCase().includes('board')
+          );
+          
+          setSensorBoards(sensors);
+          setMicrocontrollerBoards(microcontrollers);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch boards:', error);
+    }
+  };
+
+  const fetchPins = async (boardId, type) => {
+    try {
+      const response = await fetch(`/api/admin/boards/${boardId}/pins`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        }
+      });
+      
+      if (response.ok) {
+        const pins = await response.json();
+        if (type === 'sensor') {
+          setSensorPins(pins);
+        } else {
+          setMicrocontrollerPins(pins);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch pins:', error);
+    }
+  };
+
+  const handleSensorChange = (e) => {
+    const boardId = e.target.value;
+    setSelectedSensor(boardId);
+    if (boardId) {
+      fetchPins(boardId, 'sensor');
+    } else {
+      setSensorPins([]);
+    }
+    setConnections([]);
+  };
+
+  const handleMicrocontrollerChange = (e) => {
+    const boardId = e.target.value;
+    setSelectedMicrocontroller(boardId);
+    if (boardId) {
+      fetchPins(boardId, 'microcontroller');
+    } else {
+      setMicrocontrollerPins([]);
+    }
+    setConnections([]);
+  };
+
+  const addConnection = () => {
+    setConnections([...connections, { sensorPin: '', microcontrollerPin: '' }]);
+  };
+
+  const removeConnection = (index) => {
+    setConnections(connections.filter((_, i) => i !== index));
+  };
+
+  const updateConnection = (index, field, value) => {
+    const updated = [...connections];
+    updated[index][field] = value;
+    setConnections(updated);
+  };
+
+  const generateWiringGuide = async () => {
+    if (!selectedSensor || !selectedMicrocontroller || connections.length === 0) {
+      alert('Please select both boards and add at least one connection');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('/api/admin/wiring-guide/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        },
+        body: JSON.stringify({
+          sensorBoardId: selectedSensor,
+          microcontrollerBoardId: selectedMicrocontroller,
+          connections: connections,
+          description: description
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // Handle the generated wiring guide
+        console.log('Wiring guide generated:', result);
+        setGeneratedSVG(result.svgContent);
+        setCurrentWiringGuide({
+          id: result.wiringGuideId,
+          published: false,
+          slug: result.slug
+        });
+        setShowPreview(true);
+        // Reset pan/zoom when new SVG is generated
+        setZoomLevel(1);
+        setPanX(0);
+        setPanY(0);
+        alert('Wiring guide saved as draft successfully!');
+      } else {
+        const error = await response.json();
+        alert('Failed to generate wiring guide: ' + error.error);
+      }
+    } catch (error) {
+      console.error('Failed to generate wiring guide:', error);
+      alert('Failed to generate wiring guide');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Pan/Zoom functions
+  const zoomWiringGuide = (factor) => {
+    setZoomLevel(prev => Math.max(0.1, Math.min(5, prev * factor)));
+  };
+
+  const resetWiringGuideZoom = () => {
+    setZoomLevel(1);
+    setPanX(0);
+    setPanY(0);
+  };
+
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - panX, y: e.clientY - panY });
+  };
+
+  const handleMouseMove = (e) => {
+    if (isDragging) {
+      setPanX(e.clientX - dragStart.x);
+      setPanY(e.clientY - dragStart.y);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleWheel = (e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    zoomWiringGuide(delta);
+  };
+
+  const publishWiringGuide = async (publish) => {
+    if (!currentWiringGuide) return;
+    
+    try {
+      const response = await fetch(`/api/admin/wiring-guide/${currentWiringGuide.id}/publish`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        },
+        body: JSON.stringify({ published: publish })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setCurrentWiringGuide(prev => ({ ...prev, published: publish }));
+        alert(result.message);
+      } else {
+        const error = await response.json();
+        alert('Failed to update wiring guide: ' + error.error);
+      }
+    } catch (error) {
+      console.error('Failed to update wiring guide:', error);
+      alert('Failed to update wiring guide');
+    }
+  };
+
+  return (
+    <WiringGuideContainer>
+      <WiringStep>
+        <StepTitle>
+          <Link size={20} />
+          Step 1: Select Boards
+        </StepTitle>
+        <BoardSelector>
+          <SelectorGroup>
+            <SelectorLabel>Sensor Board</SelectorLabel>
+            <BoardSelect value={selectedSensor} onChange={handleSensorChange}>
+              <option value="">Select a sensor board...</option>
+              {sensorBoards.map(board => (
+                <option key={board.id} value={board.id}>
+                  {board.name} ({board.manufacturer})
+                </option>
+              ))}
+            </BoardSelect>
+          </SelectorGroup>
+          
+          <SelectorGroup>
+            <SelectorLabel>Microcontroller Board</SelectorLabel>
+            <BoardSelect value={selectedMicrocontroller} onChange={handleMicrocontrollerChange}>
+              <option value="">Select a microcontroller board...</option>
+              {microcontrollerBoards.map(board => (
+                <option key={board.id} value={board.id}>
+                  {board.name} ({board.manufacturer})
+                </option>
+              ))}
+            </BoardSelect>
+          </SelectorGroup>
+        </BoardSelector>
+      </WiringStep>
+
+      {selectedSensor && selectedMicrocontroller && (
+        <WiringStep>
+          <StepTitle>
+            <Link size={20} />
+            Step 2: Connect Pins
+          </StepTitle>
+          
+          {connections.map((connection, index) => (
+            <ConnectionRow key={index}>
+              <PinSelector
+                value={connection.sensorPin}
+                onChange={(e) => updateConnection(index, 'sensorPin', e.target.value)}
+              >
+                <option value="">Select sensor pin...</option>
+                {sensorPins.map(pin => (
+                  <option key={pin.id} value={pin.id}>
+                    {pin.pin_name} ({pin.pin_number})
+                  </option>
+                ))}
+              </PinSelector>
+              
+              <ConnectionArrow>→</ConnectionArrow>
+              
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <PinSelector
+                  value={connection.microcontrollerPin}
+                  onChange={(e) => updateConnection(index, 'microcontrollerPin', e.target.value)}
+                >
+                  <option value="">Select microcontroller pin...</option>
+                  {microcontrollerPins.map(pin => (
+                    <option key={pin.id} value={pin.id}>
+                      {pin.pin_name} ({pin.pin_number})
+                    </option>
+                  ))}
+                </PinSelector>
+                
+                <RemoveConnectionButton onClick={() => removeConnection(index)}>
+                  ×
+                </RemoveConnectionButton>
+              </div>
+            </ConnectionRow>
+          ))}
+          
+          <AddConnectionButton onClick={addConnection}>
+            + Add Connection
+          </AddConnectionButton>
+        </WiringStep>
+      )}
+
+      {connections.length > 0 && (
+        <WiringStep>
+          <StepTitle>
+            <Link size={20} />
+            Step 3: Generate Wiring Guide
+          </StepTitle>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              Description (optional):
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Enter a description for this wiring guide..."
+              style={{
+                width: '100%',
+                minHeight: '80px',
+                padding: '8px',
+                border: '1px solid #e2e8f0',
+                borderRadius: '6px',
+                fontSize: '14px',
+                resize: 'vertical'
+              }}
+            />
+          </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <GenerateButton onClick={generateWiringGuide} disabled={loading}>
+            {loading ? 'Generating...' : 'Save as Draft'}
+          </GenerateButton>
+        </div>
+        </WiringStep>
+      )}
+
+      {showPreview && generatedSVG && (
+        <WiringStep>
+          <StepTitle>
+            <Link size={20} />
+            Wiring Guide Preview
+            {currentWiringGuide && (
+              <span style={{ 
+                marginLeft: '12px', 
+                padding: '4px 8px', 
+                borderRadius: '4px', 
+                fontSize: '12px', 
+                fontWeight: 'bold',
+                background: currentWiringGuide.published ? '#10b981' : '#f59e0b',
+                color: 'white'
+              }}>
+                {currentWiringGuide.published ? 'PUBLISHED' : 'DRAFT'}
+              </span>
+            )}
+          </StepTitle>
+          <div style={{ 
+            border: '1px solid #e2e8f0', 
+            borderRadius: '8px', 
+            padding: '16px', 
+            background: 'white',
+            overflow: 'hidden',
+            maxHeight: '600px',
+            position: 'relative'
+          }}>
+            <div 
+              id="wiring-guide-svg-container"
+              style={{ 
+                width: '100%', 
+                height: '500px',
+                position: 'relative',
+                overflow: 'hidden',
+                cursor: isDragging ? 'grabbing' : 'grab'
+              }}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onWheel={handleWheel}
+            >
+              <div
+                style={{
+                  transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel})`,
+                  transformOrigin: 'center center',
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
+                dangerouslySetInnerHTML={{ __html: generatedSVG }} 
+              />
+            </div>
+            
+            {/* Pan/Zoom Controls */}
+            <div style={{
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              zIndex: 10
+            }}>
+              {/* Zoom Level Indicator */}
+              <div style={{
+                background: 'white',
+                border: '1px solid #e2e8f0',
+                borderRadius: '6px',
+                padding: '8px 12px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                textAlign: 'center',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                minWidth: '60px'
+              }}>
+                {Math.round(zoomLevel * 100)}%
+              </div>
+              <button
+                onClick={() => zoomWiringGuide(1.2)}
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  background: 'white',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+                title="Zoom In"
+              >
+                +
+              </button>
+              <button
+                onClick={() => zoomWiringGuide(0.8)}
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  background: 'white',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+                title="Zoom Out"
+              >
+                −
+              </button>
+              <button
+                onClick={() => resetWiringGuideZoom()}
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  background: 'white',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+                title="Reset Zoom"
+              >
+                ⌂
+              </button>
+            </div>
+          </div>
+          <div style={{ marginTop: '16px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            {currentWiringGuide && !currentWiringGuide.published && (
+              <button 
+                onClick={() => publishWiringGuide(true)}
+                style={{
+                  padding: '8px 16px',
+                  background: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                📢 Publish
+              </button>
+            )}
+            {currentWiringGuide && currentWiringGuide.published && (
+              <button 
+                onClick={() => publishWiringGuide(false)}
+                style={{
+                  padding: '8px 16px',
+                  background: '#f59e0b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                📝 Unpublish
+              </button>
+            )}
+            {currentWiringGuide && currentWiringGuide.published && (
+              <button 
+                onClick={() => window.open(`/wiring-guide/${currentWiringGuide.slug}`, '_blank')}
+                style={{
+                  padding: '8px 16px',
+                  background: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                👁️ View Public
+              </button>
+            )}
+            <button 
+              onClick={() => setShowPreview(false)}
+              style={{
+                padding: '8px 16px',
+                background: '#6b7280',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              Close Preview
+            </button>
+          </div>
+        </WiringStep>
+      )}
+    </WiringGuideContainer>
+  );
+};
+
+const ManageWiringGuidesContent = () => {
+  const [wiringGuides, setWiringGuides] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchWiringGuides();
+  }, []);
+
+  const fetchWiringGuides = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/admin/wiring-guides', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setWiringGuides(data);
+        setError(null);
+      } else {
+        setError('Failed to load wiring guides');
+      }
+    } catch (err) {
+      console.error('Error fetching wiring guides:', err);
+      setError('Failed to load wiring guides');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const togglePublish = async (id, currentStatus) => {
+    try {
+      const response = await fetch(`/api/admin/wiring-guide/${id}/publish`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        },
+        body: JSON.stringify({ published: !currentStatus })
+      });
+
+      if (response.ok) {
+        setWiringGuides(prev => 
+          prev.map(guide => 
+            guide.id === id ? { ...guide, published: !currentStatus } : guide
+          )
+        );
+      } else {
+        alert('Failed to update wiring guide status');
+      }
+    } catch (error) {
+      console.error('Error updating wiring guide:', error);
+      alert('Failed to update wiring guide status');
+    }
+  };
+
+  const deleteWiringGuide = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this wiring guide?')) return;
+    
+    try {
+      const response = await fetch(`/api/admin/wiring-guide/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        }
+      });
+
+      if (response.ok) {
+        setWiringGuides(prev => prev.filter(guide => guide.id !== id));
+        alert('Wiring guide deleted successfully');
+      } else {
+        alert('Failed to delete wiring guide');
+      }
+    } catch (error) {
+      console.error('Error deleting wiring guide:', error);
+      alert('Failed to delete wiring guide');
+    }
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '40px' }}>
+        <div style={{ fontSize: '18px', color: '#6b7280' }}>Loading wiring guides...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ textAlign: 'center', padding: '40px' }}>
+        <div style={{ fontSize: '18px', color: '#dc2626' }}>{error}</div>
+        <button 
+          onClick={fetchWiringGuides}
+          style={{
+            marginTop: '16px',
+            padding: '8px 16px',
+            background: '#3b82f6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer'
+          }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ marginBottom: '24px' }}>
+        <h2 style={{ margin: '0 0 8px 0', color: '#1f2937' }}>Manage Wiring Guides</h2>
+        <p style={{ margin: '0', color: '#6b7280' }}>
+          Manage your wiring guides, publish drafts, and view published guides.
+        </p>
+      </div>
+
+      {wiringGuides.length === 0 ? (
+        <div style={{ 
+          textAlign: 'center', 
+          padding: '60px 20px',
+          background: '#f9fafb',
+          borderRadius: '8px',
+          border: '1px solid #e5e7eb'
+        }}>
+          <FileText size={48} style={{ color: '#9ca3af', marginBottom: '16px' }} />
+          <h3 style={{ margin: '0 0 8px 0', color: '#6b7280' }}>No wiring guides found</h3>
+          <p style={{ margin: '0', color: '#9ca3af' }}>Create your first wiring guide in the "Wiring Guide" tab.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: '16px' }}>
+          {wiringGuides.map((guide) => (
+            <div
+              key={guide.id}
+              style={{
+                background: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                padding: '20px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                  <h3 style={{ margin: '0', color: '#1f2937', fontSize: '16px' }}>
+                    {guide.sensor_name} → {guide.microcontroller_name}
+                  </h3>
+                  <span style={{
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    background: guide.published ? '#10b981' : '#f59e0b',
+                    color: 'white'
+                  }}>
+                    {guide.published ? 'PUBLISHED' : 'DRAFT'}
+                  </span>
+                </div>
+                {guide.description && (
+                  <p style={{ margin: '0 0 8px 0', color: '#6b7280', fontSize: '14px' }}>
+                    {guide.description}
+                  </p>
+                )}
+                <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                  Created: {formatDate(guide.created_at)}
+                </div>
+              </div>
+              
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button
+                  onClick={() => togglePublish(guide.id, guide.published)}
+                  style={{
+                    padding: '6px 12px',
+                    background: guide.published ? '#f59e0b' : '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  {guide.published ? <EyeOff size={14} /> : <Globe size={14} />}
+                  {guide.published ? 'Unpublish' : 'Publish'}
+                </button>
+                
+                {guide.published && (
+                  <button
+                    onClick={() => window.open(`/wiring-guide/${guide.slug}`, '_blank')}
+                    style={{
+                      padding: '6px 12px',
+                      background: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <Eye size={14} />
+                    View
+                  </button>
+                )}
+                
+                <button
+                  onClick={() => deleteWiringGuide(guide.id)}
+                  style={{
+                    padding: '6px 12px',
+                    background: '#dc2626',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <Trash2 size={14} />
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Admin = () => {
   const { isAuthenticated, token, login, logout, verifyToken } = useAuth();
   const [activeTab, setActiveTab] = useState('boards');
@@ -781,7 +1768,8 @@ const Admin = () => {
     flash_memory: '',
     ram: '',
     image_url: '',
-    link: ''
+    link: '',
+    category: ''
   });
 
   useEffect(() => {
@@ -1062,7 +2050,9 @@ const Admin = () => {
           clock_speed: '',
           flash_memory: '',
           ram: '',
-          image_url: ''
+          image_url: '',
+          link: '',
+          category: ''
         });
         setFritzingData(null);
         // Clear cache and refresh data
@@ -1333,6 +2323,20 @@ const Admin = () => {
             <Upload size={20} />
             Upload FZPZ
           </Tab>
+          <Tab 
+            $active={activeTab === 'wiring'} 
+            onClick={() => setActiveTab('wiring')}
+          >
+            <Link size={20} />
+            Wiring Guide
+          </Tab>
+          <Tab 
+            $active={activeTab === 'manage-wiring'} 
+            onClick={() => setActiveTab('manage-wiring')}
+          >
+            <FileText size={20} />
+            Manage Wiring Guides
+          </Tab>
         </TabsContainer>
 
         {activeTab === 'boards' && (
@@ -1526,6 +2530,18 @@ const Admin = () => {
           </TabContent>
         )}
 
+        {activeTab === 'wiring' && (
+          <TabContent>
+            <WiringGuideContent />
+          </TabContent>
+        )}
+
+        {activeTab === 'manage-wiring' && (
+          <TabContent>
+            <ManageWiringGuidesContent />
+          </TabContent>
+        )}
+
         <AnimatePresence>
           {showModal && fritzingData && (
             <Modal
@@ -1624,6 +2640,33 @@ const Admin = () => {
                         onChange={(e) => setBoardForm({...boardForm, link: e.target.value})}
                         placeholder="https://example.com/board-documentation"
                       />
+                    </FormGroup>
+
+                    <FormGroup>
+                      <Label>Category</Label>
+                      <select
+                        value={boardForm.category}
+                        onChange={(e) => setBoardForm({...boardForm, category: e.target.value})}
+                        style={{
+                          padding: '12px 16px',
+                          border: '2px solid #e2e8f0',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          background: 'white',
+                          width: '100%'
+                        }}
+                      >
+                        <option value="">Select a category...</option>
+                        <option value="microcontroller-8bit">🔧 Microcontroller (8-bit)</option>
+                        <option value="microcontroller-16bit">⚙️ Microcontroller (16-bit)</option>
+                        <option value="microcontroller-32bit">🔩 Microcontroller (32-bit)</option>
+                        <option value="development-board">📱 Development Board</option>
+                        <option value="sensor-module">📡 Sensor & Module</option>
+                        <option value="communication-ic">📶 Communication IC</option>
+                        <option value="power-management">⚡ Power Management</option>
+                        <option value="memory-storage">💾 Memory & Storage</option>
+                        <option value="custom-other">🔧 Custom/Other</option>
+                      </select>
                     </FormGroup>
                   </FormGrid>
 

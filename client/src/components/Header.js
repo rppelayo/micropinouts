@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Cpu, Home, Settings, LogOut, GitCompare } from 'lucide-react';
+import { Cpu, Home, Settings, LogOut, GitCompare, Link as LinkIcon } from 'lucide-react';
 import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -120,6 +120,10 @@ const Header = () => {
           <NavLink to="/compare" $active={location.pathname === '/compare'}>
             <GitCompare size={20} />
             Compare
+          </NavLink>
+          <NavLink to="/wiring-guides" $active={location.pathname === '/wiring-guides'}>
+            <LinkIcon size={20} />
+            Wiring Guides
           </NavLink>
           {isAuthenticated && (
             <NavLink to="/admin" $active={location.pathname === '/admin'}>

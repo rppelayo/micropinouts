@@ -143,16 +143,17 @@ router.post('/boards', verifyAdminToken, (req, res) => {
     flash_memory,
     ram,
     image_url,
-    link
+    link,
+    category 
   } = req.body;
 
   const slug = generateSlug(name);
   const db = new sqlite3.Database('./database.sqlite');
   
   db.run(`
-    INSERT INTO boards (name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, slug, link)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, slug, link], 
+    INSERT INTO boards (name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, slug, link, category)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, slug, link, category], 
   function(err) {
     if (err) {
       console.error('Error creating board:', err);
@@ -170,7 +171,7 @@ router.post('/boards', verifyAdminToken, (req, res) => {
 
 // Update board
 router.put('/boards/:id', verifyAdminToken, (req, res) => {
-  const boardId = req.params.id;
+  const identifier = req.params.id;
   const {
     name,
     description,
@@ -182,18 +183,23 @@ router.put('/boards/:id', verifyAdminToken, (req, res) => {
     flash_memory,
     ram,
     image_url,
-    link
+    link,
+    category
   } = req.body;
 
   const slug = generateSlug(name);
   const db = new sqlite3.Database('./database.sqlite');
   
+  // Check if identifier is a number (ID) or string (slug)
+  const isNumeric = /^\d+$/.test(identifier);
+  const whereClause = isNumeric ? "id = ?" : "slug = ?";
+  
   db.run(`
     UPDATE boards 
     SET name = ?, description = ?, manufacturer = ?, package_type = ?, pin_count = ?, 
-        voltage_range = ?, clock_speed = ?, flash_memory = ?, ram = ?, image_url = ?, slug = ?, link = ?
-    WHERE id = ?
-  `, [name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, slug, link, boardId], 
+        voltage_range = ?, clock_speed = ?, flash_memory = ?, ram = ?, image_url = ?, slug = ?, link = ?, category = ?
+    WHERE ${whereClause}
+  `, [name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, slug, link, category, identifier], 
   function(err) {
     if (err) {
       console.error('Error updating board:', err);
@@ -212,31 +218,75 @@ router.put('/boards/:id', verifyAdminToken, (req, res) => {
 
 // Delete board
 router.delete('/boards/:id', verifyAdminToken, (req, res) => {
-  const boardId = req.params.id;
+  const identifier = req.params.id;
   const db = new sqlite3.Database('./database.sqlite');
   
-  // First delete all pins for this board
-  db.run('DELETE FROM pins WHERE board_id = ?', [boardId], (err) => {
-    if (err) {
-      console.error('Error deleting pins:', err);
-      res.status(500).json({ error: 'Failed to delete board pins' });
-      db.close();
-      return;
-    }
-    
-    // Then delete the board
-    db.run('DELETE FROM boards WHERE id = ?', [boardId], function(err) {
+  // Check if identifier is a number (ID) or string (slug)
+  const isNumeric = /^\d+$/.test(identifier);
+  
+  if (isNumeric) {
+    // Direct ID lookup
+    // First delete all pins for this board
+    db.run('DELETE FROM pins WHERE board_id = ?', [identifier], (err) => {
       if (err) {
-        console.error('Error deleting board:', err);
-        res.status(500).json({ error: 'Failed to delete board' });
-      } else if (this.changes === 0) {
-        res.status(404).json({ error: 'Board not found' });
-      } else {
-        res.json({ message: 'Board deleted successfully' });
+        console.error('Error deleting pins:', err);
+        res.status(500).json({ error: 'Failed to delete board pins' });
+        db.close();
+        return;
       }
-      db.close();
+      
+      // Then delete the board
+      db.run('DELETE FROM boards WHERE id = ?', [identifier], function(err) {
+        if (err) {
+          console.error('Error deleting board:', err);
+          res.status(500).json({ error: 'Failed to delete board' });
+        } else if (this.changes === 0) {
+          res.status(404).json({ error: 'Board not found' });
+        } else {
+          res.json({ message: 'Board deleted successfully' });
+        }
+        db.close();
+      });
     });
-  });
+  } else {
+    // Slug lookup - first get board ID, then delete
+    db.get('SELECT id FROM boards WHERE slug = ?', [identifier], (err, board) => {
+      if (err) {
+        console.error('Error fetching board:', err);
+        res.status(500).json({ error: 'Failed to fetch board' });
+        db.close();
+        return;
+      }
+      if (!board) {
+        res.status(404).json({ error: 'Board not found' });
+        db.close();
+        return;
+      }
+      
+      // First delete all pins for this board
+      db.run('DELETE FROM pins WHERE board_id = ?', [board.id], (err) => {
+        if (err) {
+          console.error('Error deleting pins:', err);
+          res.status(500).json({ error: 'Failed to delete board pins' });
+          db.close();
+          return;
+        }
+        
+        // Then delete the board
+        db.run('DELETE FROM boards WHERE id = ?', [board.id], function(err) {
+          if (err) {
+            console.error('Error deleting board:', err);
+            res.status(500).json({ error: 'Failed to delete board' });
+          } else if (this.changes === 0) {
+            res.status(404).json({ error: 'Board not found' });
+          } else {
+            res.json({ message: 'Board deleted successfully' });
+          }
+          db.close();
+        });
+      });
+    });
+  }
 });
 
 // Upload and parse Fritzing/SVG file
@@ -396,8 +446,8 @@ router.post('/boards/from-fritzing', verifyAdminToken, async (req, res) => {
     console.log('Generated slug:', slug);
     
     db.run(`
-      INSERT INTO boards (name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, svg_content, slug, link)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO boards (name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, svg_content, slug, link, category)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       boardData.name,
       boardData.description,
@@ -411,7 +461,8 @@ router.post('/boards/from-fritzing', verifyAdminToken, async (req, res) => {
       boardData.image_url,
       svgContent,
       slug,
-      boardData.link
+      boardData.link,
+      boardData.category || 'custom-other'
     ], function(err) {
       if (err) {
         console.error('Error creating board:', err);
@@ -782,6 +833,60 @@ router.get('/pin-groups', verifyAdminToken, (req, res) => {
   });
 });
 
+// Get available board categories
+router.get('/categories', verifyAdminToken, (req, res) => {
+  const categories = [
+    { key: 'microcontroller-8bit', name: 'Microcontroller (8-bit)', icon: '🔧', color: '#3498db' },
+    { key: 'microcontroller-16bit', name: 'Microcontroller (16-bit)', icon: '⚙️', color: '#9b59b6' },
+    { key: 'microcontroller-32bit', name: 'Microcontroller (32-bit)', icon: '🔩', color: '#e74c3c' },
+    { key: 'development-board', name: 'Development Board', icon: '📱', color: '#27ae60' },
+    { key: 'sensor-module', name: 'Sensor & Module', icon: '📡', color: '#f39c12' },
+    { key: 'communication-ic', name: 'Communication IC', icon: '📶', color: '#1abc9c' },
+    { key: 'power-management', name: 'Power Management', icon: '⚡', color: '#e67e22' },
+    { key: 'memory-storage', name: 'Memory & Storage', icon: '💾', color: '#34495e' },
+    { key: 'custom-other', name: 'Custom/Other', icon: '🔧', color: '#95a5a6' }
+  ];
+  
+  res.json(categories);
+});
+
+// Bulk update board categories based on name patterns
+router.post('/boards/bulk-update-categories', verifyAdminToken, (req, res) => {
+  const db = new sqlite3.Database('./database.sqlite');
+  
+  const updates = [
+    // Arduino boards -> development-board
+    { pattern: '%arduino%', category: 'development-board' },
+    // ESP boards -> microcontroller-32bit
+    { pattern: '%esp%', category: 'microcontroller-32bit' },
+    // Raspberry Pi -> development-board
+    { pattern: '%raspberry%', category: 'development-board' },
+    // Sensor/Module/Shield -> sensor-module
+    { pattern: '%sensor%', category: 'sensor-module' },
+    { pattern: '%module%', category: 'sensor-module' },
+    { pattern: '%shield%', category: 'sensor-module' }
+  ];
+  
+  let completed = 0;
+  let total = updates.length;
+  
+  updates.forEach(update => {
+    db.run('UPDATE boards SET category = ? WHERE name LIKE ? AND (category IS NULL OR category = "")', 
+      [update.category, update.pattern], function(err) {
+        if (err) {
+          console.error('Error updating categories:', err);
+        } else {
+          console.log(`Updated ${this.changes} boards with pattern "${update.pattern}" to category "${update.category}"`);
+        }
+        completed++;
+        if (completed === total) {
+          db.close();
+          res.json({ message: 'Bulk category update completed' });
+        }
+      });
+  });
+});
+
 // Create new pin group
 router.post('/pin-groups', verifyAdminToken, (req, res) => {
   const { name, color, description } = req.body;
@@ -806,12 +911,16 @@ router.post('/pin-groups', verifyAdminToken, (req, res) => {
 
 // Publish/Unpublish board
 router.put('/boards/:id/publish', verifyAdminToken, (req, res) => {
-  const boardId = req.params.id;
+  const identifier = req.params.id;
   const { published } = req.body;
   
   const db = new sqlite3.Database('./database.sqlite');
   
-  db.run('UPDATE boards SET published = ? WHERE id = ?', [published ? 1 : 0, boardId], function(err) {
+  // Check if identifier is a number (ID) or string (slug)
+  const isNumeric = /^\d+$/.test(identifier);
+  const whereClause = isNumeric ? "id = ?" : "slug = ?";
+  
+  db.run(`UPDATE boards SET published = ? WHERE ${whereClause}`, [published ? 1 : 0, identifier], function(err) {
     if (err) {
       console.error('Error updating board publish status:', err);
       res.status(500).json({ error: 'Failed to update board publish status' });
@@ -825,6 +934,750 @@ router.put('/boards/:id/publish', verifyAdminToken, (req, res) => {
     }
     db.close();
   });
+});
+
+// Wiring Guide Routes
+
+// Get boards by category for wiring guide
+router.get('/wiring-guide/boards', verifyAdminToken, (req, res) => {
+  const { category } = req.query;
+  const db = new sqlite3.Database('./database.sqlite');
+  
+  let query = 'SELECT * FROM boards WHERE published = 1';
+  let params = [];
+  
+  if (category) {
+    // Handle multiple categories separated by commas
+    const categories = category.split(',').map(cat => cat.trim());
+    if (categories.length === 1) {
+      query += ' AND category = ?';
+      params.push(category);
+    } else {
+      const placeholders = categories.map(() => '?').join(',');
+      query += ` AND category IN (${placeholders})`;
+      params.push(...categories);
+    }
+  }
+  
+  query += ' ORDER BY name';
+  
+  db.all(query, params, (err, rows) => {
+    if (err) {
+      console.error('Error fetching boards:', err);
+      res.status(500).json({ error: 'Failed to fetch boards' });
+    } else {
+      // If no boards found by category and we're looking for specific types, fall back to name-based filtering
+      if (rows.length === 0 && category) {
+        const categories = category.split(',').map(cat => cat.trim());
+        const isLookingForSensors = categories.some(cat => cat === 'sensor-module');
+        const isLookingForMicrocontrollers = categories.some(cat => 
+          ['microcontroller-8bit', 'microcontroller-16bit', 'microcontroller-32bit', 'development-board'].includes(cat)
+        );
+        
+        if (isLookingForSensors || isLookingForMicrocontrollers) {
+          // Fallback to name-based filtering
+          let fallbackQuery = 'SELECT * FROM boards WHERE published = 1 AND (';
+          let fallbackParams = [];
+          
+          if (isLookingForSensors) {
+            fallbackQuery += 'name LIKE ? OR name LIKE ? OR name LIKE ?';
+            fallbackParams.push('%sensor%', '%module%', '%shield%');
+          }
+          
+          if (isLookingForSensors && isLookingForMicrocontrollers) {
+            fallbackQuery += ' OR ';
+          }
+          
+          if (isLookingForMicrocontrollers) {
+            fallbackQuery += 'name LIKE ? OR name LIKE ? OR name LIKE ? OR name LIKE ? OR name LIKE ?';
+            fallbackParams.push('%arduino%', '%esp%', '%raspberry%', '%microcontroller%', '%board%');
+          }
+          
+          fallbackQuery += ') ORDER BY name';
+          
+          db.all(fallbackQuery, fallbackParams, (fallbackErr, fallbackRows) => {
+            if (fallbackErr) {
+              console.error('Error in fallback query:', fallbackErr);
+              res.status(500).json({ error: 'Failed to fetch boards' });
+            } else {
+              res.json(fallbackRows);
+            }
+            db.close();
+          });
+          return;
+        }
+      }
+      
+      res.json(rows);
+    }
+    db.close();
+  });
+});
+
+// Generate wiring guide SVG
+router.post('/wiring-guide/generate', verifyAdminToken, async (req, res) => {
+  try {
+    const { sensorBoardId, microcontrollerBoardId, connections, description } = req.body;
+    
+    if (!sensorBoardId || !microcontrollerBoardId || !connections || connections.length === 0) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+    
+    const db = new sqlite3.Database('./database.sqlite');
+    
+    // Get both boards and their pins
+    const getBoardData = (boardId) => {
+      return new Promise((resolve, reject) => {
+        db.get('SELECT * FROM boards WHERE id = ?', [boardId], (err, board) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          
+          if (!board) {
+            reject(new Error('Board not found'));
+            return;
+          }
+          
+          // Get pins for this board
+          db.all(`
+            SELECT p.*, pg.name as group_name, pg.color as group_color
+            FROM pins p
+            LEFT JOIN pin_groups pg ON p.pin_group_id = pg.id
+            WHERE p.board_id = ?
+            ORDER BY CAST(p.pin_number AS INTEGER)
+          `, [boardId], (err, pins) => {
+            if (err) {
+              reject(err);
+              return;
+            }
+            
+            resolve({ board, pins });
+          });
+        });
+      });
+    };
+    
+    // Get data for both boards
+    const [sensorData, microcontrollerData] = await Promise.all([
+      getBoardData(sensorBoardId),
+      getBoardData(microcontrollerBoardId)
+    ]);
+    
+    // Generate combined SVG with wiring connections
+    const wiringGuideSVG = generateWiringGuideSVG(sensorData, microcontrollerData, connections);
+    
+    // Save the wiring guide to database
+    const wiringGuideId = await saveWiringGuide({
+      sensorBoardId,
+      microcontrollerBoardId,
+      connections,
+      svgContent: wiringGuideSVG,
+      description: description || '',
+      sensorBoard: sensorData.board,
+      microcontrollerBoard: microcontrollerData.board
+    }, db);
+    
+    db.close();
+    
+    res.json({
+      message: 'Wiring guide generated successfully',
+      wiringGuideId: wiringGuideId,
+      svgContent: wiringGuideSVG,
+      sensorBoard: sensorData.board,
+      microcontrollerBoard: microcontrollerData.board,
+      connections: connections
+    });
+    
+  } catch (error) {
+    console.error('Error generating wiring guide:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate wiring guide',
+      details: error.message 
+    });
+  }
+});
+
+// Get individual wiring guide by slug (public endpoint - only published)
+router.get('/wiring-guide/:slug', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const db = new sqlite3.Database('./database.sqlite');
+    
+    const wiringGuide = await new Promise((resolve, reject) => {
+      db.get(`
+        SELECT 
+          wg.*,
+          sb.name as sensor_name,
+          sb.slug as sensor_slug,
+          mb.name as microcontroller_name,
+          mb.slug as microcontroller_slug
+        FROM wiring_guides wg
+        JOIN boards sb ON wg.sensor_board_id = sb.id
+        JOIN boards mb ON wg.microcontroller_board_id = mb.id
+        WHERE wg.slug = ? AND wg.published = 1
+      `, [slug], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+    
+    if (!wiringGuide) {
+      db.close();
+      return res.status(404).json({ error: 'Wiring guide not found' });
+    }
+    
+    // Parse connections JSON
+    const connections = JSON.parse(wiringGuide.connections);
+    
+    // Resolve pin IDs to pin names
+    const resolvedConnections = await Promise.all(connections.map(async (connection) => {
+      const [sensorPin, microcontrollerPin] = await Promise.all([
+        new Promise((resolve, reject) => {
+          db.get('SELECT pin_name FROM pins WHERE id = ?', [connection.sensorPin], (err, row) => {
+            if (err) reject(err);
+            else resolve(row ? row.pin_name : connection.sensorPin);
+          });
+        }),
+        new Promise((resolve, reject) => {
+          db.get('SELECT pin_name FROM pins WHERE id = ?', [connection.microcontrollerPin], (err, row) => {
+            if (err) reject(err);
+            else resolve(row ? row.pin_name : connection.microcontrollerPin);
+          });
+        })
+      ]);
+      
+      return {
+        sensorPin: sensorPin,
+        microcontrollerPin: microcontrollerPin
+      };
+    }));
+    
+    wiringGuide.connections = resolvedConnections;
+    
+    db.close();
+    res.json(wiringGuide);
+  } catch (error) {
+    console.error('Error fetching wiring guide:', error);
+    res.status(500).json({ error: 'Failed to fetch wiring guide' });
+  }
+});
+
+// Get wiring guide by ID
+router.get('/wiring-guide/:id', verifyAdminToken, (req, res) => {
+  const wiringGuideId = req.params.id;
+  const db = new sqlite3.Database('./database.sqlite');
+  
+  db.get(`
+    SELECT wg.*, 
+           sb.name as sensor_board_name, sb.manufacturer as sensor_board_manufacturer,
+           mb.name as microcontroller_board_name, mb.manufacturer as microcontroller_board_manufacturer
+    FROM wiring_guides wg
+    LEFT JOIN boards sb ON wg.sensor_board_id = sb.id
+    LEFT JOIN boards mb ON wg.microcontroller_board_id = mb.id
+    WHERE wg.id = ?
+  `, [wiringGuideId], (err, row) => {
+    if (err) {
+      console.error('Error fetching wiring guide:', err);
+      res.status(500).json({ error: 'Failed to fetch wiring guide' });
+    } else if (!row) {
+      res.status(404).json({ error: 'Wiring guide not found' });
+    } else {
+      res.json(row);
+    }
+    db.close();
+  });
+});
+
+// List all wiring guides
+// Helper function to generate wiring guide SVG
+function generateWiringGuideSVG(sensorData, microcontrollerData, connections) {
+  const { board: sensorBoard, pins: sensorPins } = sensorData;
+  const { board: microcontrollerBoard, pins: microcontrollerPins } = microcontrollerData;
+  
+  // Create a map of pin IDs to pin data for quick lookup
+  const sensorPinMap = new Map(sensorPins.map(pin => [pin.id, pin]));
+  const microcontrollerPinMap = new Map(microcontrollerPins.map(pin => [pin.id, pin]));
+  
+  // Calculate board dimensions and positions
+  const sensorDimensions = getSVGDimensions(sensorBoard.svg_content);
+  const microcontrollerDimensions = getSVGDimensions(microcontrollerBoard.svg_content);
+  
+  // Set default dimensions if not available
+  const sensorWidth = sensorDimensions.width || 200;
+  const sensorHeight = sensorDimensions.height || 150;
+  const microcontrollerWidth = microcontrollerDimensions.width || 200;
+  const microcontrollerHeight = microcontrollerDimensions.height || 150;
+  
+  // Calculate spacing and positions with larger scale
+  const scale = 2.5; // Scale up the boards for better visibility
+  const scaledSensorWidth = sensorWidth * scale;
+  const scaledSensorHeight = sensorHeight * scale;
+  const scaledMicrocontrollerWidth = microcontrollerWidth * scale;
+  const scaledMicrocontrollerHeight = microcontrollerHeight * scale;
+  
+  const boardSpacing = Math.max(300, (scaledSensorWidth + scaledMicrocontrollerWidth) * 0.4);
+  const padding = 80;
+  const sensorX = padding;
+  const microcontrollerX = sensorX + scaledSensorWidth + boardSpacing;
+  const boardY = padding;
+  
+  // Calculate total canvas size
+  const totalWidth = scaledSensorWidth + scaledMicrocontrollerWidth + boardSpacing + (padding * 2);
+  const totalHeight = Math.max(scaledSensorHeight, scaledMicrocontrollerHeight) + (padding * 2) + 120; // Extra space for labels and connections
+  
+  // Start building the SVG with calculated dimensions
+  let svg = `<svg width="${totalWidth}" height="${totalHeight}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth} ${totalHeight}">
+    <defs>
+      <style>
+        .wire { stroke-width: 3; fill: none; }
+        .wire-power { stroke: #dc2626; } /* Red for VCC/5V/3.3V */
+        .wire-ground { stroke: #000000; } /* Black for GND */
+        .wire-signal { stroke: #3b82f6; } /* Blue for other pins */
+        .connection-label { font-family: Arial, sans-serif; font-size: 10px; text-anchor: middle; fill: #374151; font-weight: bold; }
+        .board-label { font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; text-anchor: middle; fill: #1f2937; }
+      </style>
+    </defs>
+    
+    <!-- Background -->
+    <rect width="${totalWidth}" height="${totalHeight}" fill="#ffffff"/>`;
+  
+  // Add sensor board SVG content if it exists
+  if (sensorBoard.svg_content) {
+    // Extract the content inside the <svg> tag from the sensor board
+    const sensorSVGContent = extractSVGContent(sensorBoard.svg_content);
+    svg += `<g transform="translate(${sensorX}, ${boardY}) scale(${scale})">${sensorSVGContent}</g>`;
+    svg += `<text x="${sensorX + (scaledSensorWidth / 2)}" y="${boardY - 10}" class="board-label">${sensorBoard.name}</text>`;
+  } else {
+    // Fallback to simple rectangle if no SVG content
+    svg += `<rect x="${sensorX}" y="${boardY}" width="${scaledSensorWidth}" height="${scaledSensorHeight}" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" rx="8"/>
+            <text x="${sensorX + (scaledSensorWidth / 2)}" y="${boardY + 20}" class="board-label">${sensorBoard.name}</text>`;
+  }
+  
+  // Add microcontroller board SVG content if it exists
+  if (microcontrollerBoard.svg_content) {
+    // Extract the content inside the <svg> tag from the microcontroller board
+    const microcontrollerSVGContent = extractSVGContent(microcontrollerBoard.svg_content);
+    svg += `<g transform="translate(${microcontrollerX}, ${boardY}) scale(${scale})">${microcontrollerSVGContent}</g>`;
+    svg += `<text x="${microcontrollerX + (scaledMicrocontrollerWidth / 2)}" y="${boardY - 10}" class="board-label">${microcontrollerBoard.name}</text>`;
+  } else {
+    // Fallback to simple rectangle if no SVG content
+    svg += `<rect x="${microcontrollerX}" y="${boardY}" width="${scaledMicrocontrollerWidth}" height="${scaledMicrocontrollerHeight}" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" rx="8"/>
+            <text x="${microcontrollerX + (scaledMicrocontrollerWidth / 2)}" y="${boardY + 20}" class="board-label">${microcontrollerBoard.name}</text>`;
+  }
+  
+  // Draw connections between boards using straight lines with path planning
+  const wireColors = [
+    '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', 
+    '#84cc16', '#f97316', '#ec4899', '#6366f1', '#14b8a6', '#eab308'
+  ];
+  let usedColors = new Set();
+  
+  connections.forEach((connection, index) => {
+    const sensorPin = sensorPinMap.get(parseInt(connection.sensorPin));
+    const microcontrollerPin = microcontrollerPinMap.get(parseInt(connection.microcontrollerPin));
+    
+    if (sensorPin && microcontrollerPin) {
+      // Find actual pin positions in the SVG content
+      const sensorPinPos = findPinPositionInSVG(sensorBoard.svg_content, sensorPin.pin_name);
+      const microcontrollerPinPos = findPinPositionInSVG(microcontrollerBoard.svg_content, microcontrollerPin.pin_name);
+      
+      let sensorPinX, sensorPinY, microcontrollerPinX, microcontrollerPinY;
+      
+      if (sensorPinPos) {
+        // Use actual pin position from sensor board SVG (scaled)
+        sensorPinX = sensorX + (sensorPinPos.x * scale);
+        sensorPinY = boardY + (sensorPinPos.y * scale);
+      } else {
+        // Fallback positioning for sensor board
+        sensorPinX = sensorX + scaledSensorWidth;
+        sensorPinY = boardY + 50 + (index * 30);
+      }
+      
+      if (microcontrollerPinPos) {
+        // Use actual pin position from microcontroller board SVG (scaled)
+        microcontrollerPinX = microcontrollerX + (microcontrollerPinPos.x * scale);
+        microcontrollerPinY = boardY + (microcontrollerPinPos.y * scale);
+      } else {
+        // Fallback positioning for microcontroller board
+        microcontrollerPinX = microcontrollerX;
+        microcontrollerPinY = boardY + 50 + (index * 30);
+      }
+      
+      // Determine wire color based on pin types
+      let wireColorClass = 'wire-signal';
+      let wireColor = '#3b82f6'; // Default blue
+      
+      const sensorPinName = sensorPin.pin_name.toUpperCase();
+      const microcontrollerPinName = microcontrollerPin.pin_name.toUpperCase();
+      
+      // Check for power pins (VCC, 5V, 3.3V)
+      if (sensorPinName.includes('VCC') || sensorPinName.includes('5V') || sensorPinName.includes('3.3V') ||
+          microcontrollerPinName.includes('VCC') || microcontrollerPinName.includes('5V') || microcontrollerPinName.includes('3.3V')) {
+        wireColorClass = 'wire-power';
+        wireColor = '#dc2626'; // Red
+      }
+      // Check for ground pins
+      else if (sensorPinName.includes('GND') || microcontrollerPinName.includes('GND')) {
+        wireColorClass = 'wire-ground';
+        wireColor = '#000000'; // Black
+      }
+      // For other pins, use unique colors
+      else {
+        // Find an unused color
+        for (const color of wireColors) {
+          if (!usedColors.has(color)) {
+            wireColor = color;
+            usedColors.add(color);
+            break;
+          }
+        }
+      }
+      
+      // Draw wire with a nice curve (no text labels)
+      const midX = (sensorPinX + microcontrollerPinX) / 2;
+      const controlY = Math.min(sensorPinY, microcontrollerPinY) - 50;
+      
+      svg += `<path d="M ${sensorPinX} ${sensorPinY} Q ${midX} ${controlY} ${microcontrollerPinX} ${microcontrollerPinY}" class="wire" style="stroke: ${wireColor};"/>`;
+    }
+  });
+  
+  svg += '</svg>';
+  
+  return svg;
+}
+
+// Helper function to extract content from SVG string
+function extractSVGContent(svgString) {
+  // Find the content between <svg> and </svg> tags
+  const svgStart = svgString.indexOf('<svg');
+  const svgEnd = svgString.lastIndexOf('</svg>');
+  
+  if (svgStart === -1 || svgEnd === -1) {
+    return '';
+  }
+  
+  // Find the end of the opening <svg> tag
+  const tagEnd = svgString.indexOf('>', svgStart) + 1;
+  
+  // Extract everything between the opening tag and closing tag
+  return svgString.substring(tagEnd, svgEnd);
+}
+
+// Helper function to get SVG dimensions
+function getSVGDimensions(svgContent) {
+  if (!svgContent) {
+    return { width: 0, height: 0 };
+  }
+  
+  // Look for width and height attributes in the SVG tag
+  const widthMatch = svgContent.match(/width=["']([^"']+)["']/);
+  const heightMatch = svgContent.match(/height=["']([^"']+)["']/);
+  
+  // Look for viewBox attribute
+  const viewBoxMatch = svgContent.match(/viewBox=["']([^"']+)["']/);
+  
+  let width = 0;
+  let height = 0;
+  
+  if (widthMatch && heightMatch) {
+    // Extract numeric values (remove units like 'px', 'pt', etc.)
+    width = parseFloat(widthMatch[1]);
+    height = parseFloat(heightMatch[1]);
+  } else if (viewBoxMatch) {
+    // Parse viewBox format: "x y width height"
+    const viewBoxValues = viewBoxMatch[1].split(/\s+/);
+    if (viewBoxValues.length >= 4) {
+      width = parseFloat(viewBoxValues[2]);
+      height = parseFloat(viewBoxValues[3]);
+    }
+  }
+  
+  // If no dimensions found, try to calculate from content bounds
+  if (width === 0 || height === 0) {
+    // Look for the largest x/y coordinates in the content
+    const allNumbers = svgContent.match(/\d+\.?\d*/g);
+    if (allNumbers) {
+      const numbers = allNumbers.map(n => parseFloat(n));
+      width = Math.max(...numbers) * 1.2; // Add some padding
+      height = Math.max(...numbers) * 1.2;
+    }
+  }
+  
+  return { width: width || 200, height: height || 150 };
+}
+
+
+// Helper function to find pin position in SVG content
+function findPinPositionInSVG(svgContent, pinName) {
+  if (!svgContent || !pinName) {
+    return null;
+  }
+  
+  // Escape special regex characters in pin name
+  const escapedPinName = pinName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  
+  // Look for elements with data-pin attribute matching the pin name
+  const pinHoleRegex = new RegExp(`<[^>]*data-pin=["']${escapedPinName}["'][^>]*>`, 'g');
+  const matches = svgContent.match(pinHoleRegex);
+  
+  if (!matches || matches.length === 0) {
+    return null;
+  }
+  
+  // Get the first match and extract coordinates
+  const pinHoleElement = matches[0];
+  
+  // Look for transform attribute with translate
+  const transformMatch = pinHoleElement.match(/transform=["']translate\(([^,]+),\s*([^)]+)\)/);
+  if (transformMatch) {
+    return {
+      x: parseFloat(transformMatch[1]),
+      y: parseFloat(transformMatch[2])
+    };
+  }
+  
+  // Look for cx and cy attributes (for circles)
+  const cxMatch = pinHoleElement.match(/cx=["']([^"']+)["']/);
+  const cyMatch = pinHoleElement.match(/cy=["']([^"']+)["']/);
+  
+  if (cxMatch && cyMatch) {
+    return {
+      x: parseFloat(cxMatch[1]),
+      y: parseFloat(cyMatch[1])
+    };
+  }
+  
+  // Look for x and y attributes (for rectangles)
+  const xMatch = pinHoleElement.match(/x=["']([^"']+)["']/);
+  const yMatch = pinHoleElement.match(/y=["']([^"']+)["']/);
+  
+  if (xMatch && yMatch) {
+    return {
+      x: parseFloat(xMatch[1]),
+      y: parseFloat(yMatch[1])
+    };
+  }
+  
+  return null;
+}
+
+// Helper function to save wiring guide to database
+function saveWiringGuide(data, db) {
+  return new Promise((resolve, reject) => {
+    const { sensorBoardId, microcontrollerBoardId, connections, svgContent, description, sensorBoard, microcontrollerBoard } = data;
+    
+    // Generate slug from board names
+    const sensorSlug = sensorBoard.name.toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    const microSlug = microcontrollerBoard.name.toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    const slug = `${sensorSlug}-to-${microSlug}`;
+    
+    db.run(`
+      INSERT INTO wiring_guides (sensor_board_id, microcontroller_board_id, connections, svg_content, description, slug, published, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP)
+    `, [
+      sensorBoardId,
+      microcontrollerBoardId,
+      JSON.stringify(connections),
+      svgContent,
+      description || '',
+      slug
+    ], function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(this.lastID);
+      }
+    });
+  });
+}
+
+// Public API endpoints for wiring guides
+router.get('/wiring-guides', async (req, res) => {
+  try {
+    const db = new sqlite3.Database('./database.sqlite');
+    
+    const wiringGuides = await new Promise((resolve, reject) => {
+      db.all(`
+        SELECT 
+          wg.id,
+          wg.slug,
+          wg.description,
+          wg.created_at,
+          sb.name as sensor_name,
+          mb.name as microcontroller_name
+        FROM wiring_guides wg
+        JOIN boards sb ON wg.sensor_board_id = sb.id
+        JOIN boards mb ON wg.microcontroller_board_id = mb.id
+        WHERE wg.published = 1
+        ORDER BY wg.created_at DESC
+      `, (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+    
+    db.close();
+    res.json(wiringGuides);
+  } catch (error) {
+    console.error('Error fetching wiring guides:', error);
+    res.status(500).json({ error: 'Failed to fetch wiring guides' });
+  }
+});
+
+// Admin endpoints for managing wiring guides
+router.get('/wiring-guides', verifyAdminToken, async (req, res) => {
+  try {
+    const db = new sqlite3.Database('./database.sqlite');
+    
+    const wiringGuides = await new Promise((resolve, reject) => {
+      db.all(`
+        SELECT 
+          wg.id,
+          wg.slug,
+          wg.description,
+          wg.published,
+          wg.created_at,
+          sb.name as sensor_name,
+          mb.name as microcontroller_name
+        FROM wiring_guides wg
+        JOIN boards sb ON wg.sensor_board_id = sb.id
+        JOIN boards mb ON wg.microcontroller_board_id = mb.id
+        ORDER BY wg.created_at DESC
+      `, (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+    
+    db.close();
+    res.json(wiringGuides);
+  } catch (error) {
+    console.error('Error fetching admin wiring guides:', error);
+    res.status(500).json({ error: 'Failed to fetch wiring guides' });
+  }
+});
+
+// Get individual wiring guide by ID (admin endpoint - includes drafts)
+router.get('/wiring-guide/admin/:id', verifyAdminToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = new sqlite3.Database('./database.sqlite');
+    
+    const wiringGuide = await new Promise((resolve, reject) => {
+      db.get(`
+        SELECT 
+          wg.*,
+          sb.name as sensor_name,
+          sb.slug as sensor_slug,
+          mb.name as microcontroller_name,
+          mb.slug as microcontroller_slug
+        FROM wiring_guides wg
+        JOIN boards sb ON wg.sensor_board_id = sb.id
+        JOIN boards mb ON wg.microcontroller_board_id = mb.id
+        WHERE wg.id = ?
+      `, [id], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+    
+    if (!wiringGuide) {
+      db.close();
+      return res.status(404).json({ error: 'Wiring guide not found' });
+    }
+    
+    // Parse connections JSON
+    wiringGuide.connections = JSON.parse(wiringGuide.connections);
+    
+    db.close();
+    res.json(wiringGuide);
+  } catch (error) {
+    console.error('Error fetching admin wiring guide:', error);
+    res.status(500).json({ error: 'Failed to fetch wiring guide' });
+  }
+});
+
+// Publish/unpublish wiring guide
+router.put('/wiring-guide/:id/publish', verifyAdminToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { published } = req.body;
+    
+    const db = new sqlite3.Database('./database.sqlite');
+    
+    await new Promise((resolve, reject) => {
+      db.run(`
+        UPDATE wiring_guides 
+        SET published = ?
+        WHERE id = ?
+      `, [published ? 1 : 0, id], function(err) {
+        if (err) reject(err);
+        else resolve(this.changes);
+      });
+    });
+    
+    db.close();
+    res.json({ 
+      message: published ? 'Wiring guide published successfully' : 'Wiring guide unpublished successfully',
+      published: published
+    });
+  } catch (error) {
+    console.error('Error updating wiring guide publish status:', error);
+    res.status(500).json({ error: 'Failed to update wiring guide' });
+  }
+});
+
+// Update wiring guide (description, etc.)
+router.put('/wiring-guide/:id', verifyAdminToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { description } = req.body;
+    
+    const db = new sqlite3.Database('./database.sqlite');
+    
+    await new Promise((resolve, reject) => {
+      db.run(`
+        UPDATE wiring_guides 
+        SET description = ?
+        WHERE id = ?
+      `, [description || '', id], function(err) {
+        if (err) reject(err);
+        else resolve(this.changes);
+      });
+    });
+    
+    db.close();
+    res.json({ message: 'Wiring guide updated successfully' });
+  } catch (error) {
+    console.error('Error updating wiring guide:', error);
+    res.status(500).json({ error: 'Failed to update wiring guide' });
+  }
+});
+
+// Delete wiring guide
+router.delete('/wiring-guide/:id', verifyAdminToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = new sqlite3.Database('./database.sqlite');
+    
+    await new Promise((resolve, reject) => {
+      db.run(`DELETE FROM wiring_guides WHERE id = ?`, [id], function(err) {
+        if (err) reject(err);
+        else resolve(this.changes);
+      });
+    });
+    
+    db.close();
+    res.json({ message: 'Wiring guide deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting wiring guide:', error);
+    res.status(500).json({ error: 'Failed to delete wiring guide' });
+  }
 });
 
 module.exports = router;
