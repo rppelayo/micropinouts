@@ -668,6 +668,25 @@ const BoardDetail = () => {
               <SpecLabel>RAM</SpecLabel>
               <SpecValue>{board.ram}</SpecValue>
             </SpecItem>
+            {board.link && (
+              <SpecItem style={{ gridColumn: '1 / -1' }}>
+                <SpecLabel>Documentation</SpecLabel>
+                <SpecValue>
+                  <a 
+                    href={board.link} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ 
+                      color: '#3b82f6', 
+                      textDecoration: 'underline',
+                      wordBreak: 'break-all'
+                    }}
+                  >
+                    {board.link}
+                  </a>
+                </SpecValue>
+              </SpecItem>
+            )}
           </BoardSpecs>
         </BoardHeader>
 

@@ -780,7 +780,8 @@ const Admin = () => {
     clock_speed: '',
     flash_memory: '',
     ram: '',
-    image_url: ''
+    image_url: '',
+    link: ''
   });
 
   useEffect(() => {
@@ -1612,6 +1613,16 @@ const Admin = () => {
                         type="url"
                         value={boardForm.image_url}
                         onChange={(e) => setBoardForm({...boardForm, image_url: e.target.value})}
+                      />
+                    </FormGroup>
+
+                    <FormGroup>
+                      <Label>Link</Label>
+                      <Input
+                        type="url"
+                        value={boardForm.link}
+                        onChange={(e) => setBoardForm({...boardForm, link: e.target.value})}
+                        placeholder="https://example.com/board-documentation"
                       />
                     </FormGroup>
                   </FormGrid>

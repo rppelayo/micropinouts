@@ -81,6 +81,15 @@ function initializeDatabase() {
     }
   });
 
+  // Add link column if it doesn't exist
+  db.run(`ALTER TABLE boards ADD COLUMN link TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding link column:', err);
+    } else {
+      console.log('link column added successfully');
+    }
+  });
+
   // Pin groups table
   db.run(`CREATE TABLE IF NOT EXISTS pin_groups (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

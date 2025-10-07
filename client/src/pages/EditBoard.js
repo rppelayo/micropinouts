@@ -709,7 +709,8 @@ const EditBoard = () => {
           voltage_range: board.voltage_range,
           clock_speed: board.clock_speed,
           flash_memory: board.flash_memory,
-          ram: board.ram
+          ram: board.ram,
+          link: board.link
         })
       });
 
@@ -932,6 +933,28 @@ const EditBoard = () => {
               />
             ) : (
               <BoardInfoDisplay>{board.ram || 'Not specified'}</BoardInfoDisplay>
+            )}
+          </BoardInfoField>
+
+          <BoardInfoField style={{ gridColumn: '1 / -1' }}>
+            <BoardInfoLabel>Link</BoardInfoLabel>
+            {editingBoard ? (
+              <BoardInfoInput
+                type="url"
+                value={board.link || ''}
+                onChange={(e) => handleBoardUpdate('link', e.target.value)}
+                placeholder="https://example.com/board-documentation"
+              />
+            ) : (
+              <BoardInfoDisplay>
+                {board.link ? (
+                  <a href={board.link} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>
+                    {board.link}
+                  </a>
+                ) : (
+                  'No link provided'
+                )}
+              </BoardInfoDisplay>
             )}
           </BoardInfoField>
 

@@ -142,16 +142,17 @@ router.post('/boards', verifyAdminToken, (req, res) => {
     clock_speed,
     flash_memory,
     ram,
-    image_url
+    image_url,
+    link
   } = req.body;
 
   const slug = generateSlug(name);
   const db = new sqlite3.Database('./database.sqlite');
   
   db.run(`
-    INSERT INTO boards (name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, slug)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, slug], 
+    INSERT INTO boards (name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, slug, link)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, slug, link], 
   function(err) {
     if (err) {
       console.error('Error creating board:', err);
@@ -180,7 +181,8 @@ router.put('/boards/:id', verifyAdminToken, (req, res) => {
     clock_speed,
     flash_memory,
     ram,
-    image_url
+    image_url,
+    link
   } = req.body;
 
   const slug = generateSlug(name);
@@ -189,9 +191,9 @@ router.put('/boards/:id', verifyAdminToken, (req, res) => {
   db.run(`
     UPDATE boards 
     SET name = ?, description = ?, manufacturer = ?, package_type = ?, pin_count = ?, 
-        voltage_range = ?, clock_speed = ?, flash_memory = ?, ram = ?, image_url = ?, slug = ?
+        voltage_range = ?, clock_speed = ?, flash_memory = ?, ram = ?, image_url = ?, slug = ?, link = ?
     WHERE id = ?
-  `, [name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, slug, boardId], 
+  `, [name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, slug, link, boardId], 
   function(err) {
     if (err) {
       console.error('Error updating board:', err);
@@ -394,8 +396,8 @@ router.post('/boards/from-fritzing', verifyAdminToken, async (req, res) => {
     console.log('Generated slug:', slug);
     
     db.run(`
-      INSERT INTO boards (name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, svg_content, slug)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO boards (name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, svg_content, slug, link)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       boardData.name,
       boardData.description,
@@ -408,7 +410,8 @@ router.post('/boards/from-fritzing', verifyAdminToken, async (req, res) => {
       boardData.ram,
       boardData.image_url,
       svgContent,
-      slug
+      slug,
+      boardData.link
     ], function(err) {
       if (err) {
         console.error('Error creating board:', err);
