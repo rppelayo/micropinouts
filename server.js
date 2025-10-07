@@ -306,6 +306,60 @@ app.get('/api/boards', (req, res) => {
   });
 });
 
+// Get multiple boards for comparison (must be before /api/boards/:id)
+app.get('/api/boards/compare', (req, res) => {
+  const { ids } = req.query;
+  
+  if (!ids) {
+    res.status(400).json({ error: 'Board IDs are required' });
+    return;
+  }
+  
+  const identifiers = ids.split(',').map(id => id.trim()).filter(Boolean);
+  
+  if (identifiers.length === 0) {
+    res.status(400).json({ error: 'At least one board ID is required' });
+    return;
+  }
+  
+  if (identifiers.length > 2) {
+    res.status(400).json({ error: 'Maximum 2 boards can be compared at once' });
+    return;
+  }
+  
+  // Build WHERE clause to handle both numeric IDs and slugs
+  const whereConditions = [];
+  const params = [];
+  
+  identifiers.forEach(identifier => {
+    const isNumeric = /^\d+$/.test(identifier);
+    if (isNumeric) {
+      whereConditions.push('id = ?');
+      params.push(identifier);
+    } else {
+      whereConditions.push('slug = ?');
+      params.push(identifier);
+    }
+  });
+  
+  const whereClause = whereConditions.join(' OR ');
+  
+  db.all(`SELECT * FROM boards WHERE (${whereClause}) AND published = 1 ORDER BY name`, 
+    params, (err, rows) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    
+    if (rows.length === 0) {
+      res.status(404).json({ error: 'No boards found' });
+      return;
+    }
+    
+    res.json(rows);
+  });
+});
+
 // Get board by ID or slug (only published for regular users)
 app.get('/api/boards/:id', (req, res) => {
   const identifier = req.params.id;
@@ -404,6 +458,7 @@ app.get('/api/pins/:id', (req, res) => {
     res.json(row);
   });
 });
+
 
 
 // Catch all handler: send back React's index.html file for any non-API routes (only in production)

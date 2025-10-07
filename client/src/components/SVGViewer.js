@@ -37,7 +37,9 @@ const ViewerContent = styled.div`
   border-radius: 0 0 8px 8px;
 `;
 
-const SVGContainer = styled.div`
+const SVGContainer = styled.div.withConfig({
+  shouldForwardProp: (prop) => prop !== 'isPanning',
+})`
   position: relative;
   width: 100%;
   height: 100%;
@@ -48,10 +50,11 @@ const SVGContainer = styled.div`
   
   svg {
     display: block;
-    width: 100%;
-    height: 100%;
-    max-width: none;
-    max-height: none;
+    width: 100% !important;
+    height: auto !important;
+    max-width: 100% !important;
+    max-height: 400px !important; /* Limit maximum height for vertical boards */
+    object-fit: contain;
     pointer-events: all; /* Ensure SVG captures mouse events */
   }
 `;
@@ -382,7 +385,7 @@ const SVGViewer = ({
             dangerouslySetInnerHTML={{
               __html: svgContent?.replace(
                 /<svg([^>]*)>/i,
-                '<svg$1 style="width: 100%; height: 100%; max-width: none; max-height: none;">'
+                '<svg$1 style="width: 100%; height: auto; max-width: 100%; max-height: 400px; object-fit: contain;" width="100%" height="auto">'
               ) || '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #64748b;">No SVG content available</div>'
             }}
           />

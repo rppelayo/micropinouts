@@ -17,6 +17,7 @@ export const boardsAPI = {
   getPins: (id) => api.get(`/boards/${id}/pins`),
   getBoardPins: (id) => api.get(`/boards/${id}/pins`),
   updatePin: (pinId, data) => api.put(`/pins/${pinId}`, data),
+  compare: (ids) => api.get(`/boards/compare?ids=${ids}`),
 };
 
 // Pins API

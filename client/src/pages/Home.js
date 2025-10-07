@@ -1,12 +1,118 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
+import { GitCompare, Check } from 'lucide-react';
 import { boardsAPI } from '../services/api';
 import SVGThumbnail from '../components/SVGThumbnail';
 
 const HomeContainer = styled.div`
   padding: 40px 0;
+`;
+
+const ComparisonBar = styled.div`
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 24px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 1000;
+  min-width: 300px;
+  
+  @media (max-width: 768px) {
+    left: 20px;
+    right: 20px;
+    transform: none;
+    min-width: auto;
+  }
+`;
+
+const ComparisonCount = styled.span`
+  font-weight: 600;
+  color: #1e293b;
+`;
+
+const CompareButton = styled.button`
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: #2563eb;
+  }
+  
+  &:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+  }
+`;
+
+const ClearSelectionButton = styled.button`
+  background: none;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+  }
+`;
+
+const BoardCheckbox = styled.input`
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  z-index: 10;
+`;
+
+const CheckboxLabel = styled.label`
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  background: ${props => props.checked ? '#3b82f6' : 'white'};
+  border: 2px solid ${props => props.checked ? '#3b82f6' : '#e2e8f0'};
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 10;
+  
+  &:hover {
+    border-color: #3b82f6;
+  }
+  
+  svg {
+    color: white;
+    width: 14px;
+    height: 14px;
+  }
 `;
 
 const SearchSection = styled.div`
@@ -447,6 +553,7 @@ const PaginationInfo = styled.div`
 `;
 
 const Home = () => {
+  const navigate = useNavigate();
   const [boards, setBoards] = useState([]);
   const [filteredBoards, setFilteredBoards] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -463,6 +570,9 @@ const Home = () => {
   // Cache state
   const [boardsCache, setBoardsCache] = useState(new Map());
   const [lastFetchTime, setLastFetchTime] = useState(0);
+  
+  // Comparison state
+  const [selectedBoards, setSelectedBoards] = useState(new Set());
 
   // Debounced search function
   const debounce = (func, wait) => {
@@ -578,6 +688,29 @@ const Home = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Comparison functions
+  const toggleBoardSelection = (boardId) => {
+    const newSelection = new Set(selectedBoards);
+    if (newSelection.has(boardId)) {
+      newSelection.delete(boardId);
+    } else if (newSelection.size < 4) { // Limit to 4 boards
+      newSelection.add(boardId);
+    }
+    setSelectedBoards(newSelection);
+  };
+
+  const handleCompare = () => {
+    if (selectedBoards.size >= 2) {
+      const boardIds = Array.from(selectedBoards).join(',');
+      navigate(`/compare?boards=${boardIds}`);
+      clearSelection(); // Clear selection after navigating
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedBoards(new Set());
+  };
+
   // Reset to page 1 when search or filter changes
   useEffect(() => {
     setCurrentPage(1);
@@ -672,7 +805,15 @@ const Home = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
+                style={{ position: 'relative' }}
               >
+                <CheckboxLabel 
+                  checked={selectedBoards.has(board.id)}
+                  onClick={() => toggleBoardSelection(board.id)}
+                >
+                  {selectedBoards.has(board.id) && <Check size={14} />}
+                </CheckboxLabel>
+                
                 <CardHeader>
                   <CardTitle>
                     <SVGThumbnail 
@@ -809,6 +950,25 @@ const Home = () => {
           </FeaturesGrid>
         </FeaturesSection>
       </div>
+
+      {/* Comparison Bar */}
+      {selectedBoards.size > 0 && (
+        <ComparisonBar>
+          <ComparisonCount>
+            {selectedBoards.size} board{selectedBoards.size !== 1 ? 's' : ''} selected
+          </ComparisonCount>
+          <CompareButton 
+            onClick={handleCompare}
+            disabled={selectedBoards.size < 2}
+          >
+            <GitCompare size={16} />
+            Compare
+          </CompareButton>
+          <ClearSelectionButton onClick={clearSelection}>
+            Clear
+          </ClearSelectionButton>
+        </ComparisonBar>
+      )}
     </HomeContainer>
   );
 };

@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Filter, Info, Zap, Wifi, Cpu, Edit3 } from 'lucide-react';
+import { ArrowLeft, Filter, Info, Zap, Wifi, Cpu, Edit3, GitCompare } from 'lucide-react';
 import { boardsAPI, pinGroupsAPI } from '../services/api';
 import SVGViewer from '../components/SVGViewer';
+import CompareModal from '../components/CompareModal';
 
 const BoardDetailContainer = styled.div`
   padding: 40px 0;
@@ -31,26 +32,52 @@ const BackButton = styled(Link)`
 const BoardHeader = styled.div`
   text-align: center;
   margin-bottom: 60px;
-  position: relative;
+`;
+
+const ButtonContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
 `;
 
 const EditButton = styled(Link)`
-  position: absolute;
-  top: 0;
-  right: 0;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   background: #3b82f6;
   color: white;
   text-decoration: none;
   font-weight: 500;
-  padding: 12px 20px;
+  padding: 12px 24px;
   border-radius: 8px;
+  min-width: 140px;
   transition: all 0.2s ease;
   
   &:hover {
     background: #2563eb;
+    color: white;
+  }
+`;
+
+const CompareButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #10b981;
+  color: white;
+  border: none;
+  font-weight: 500;
+  padding: 12px 16px;
+  border-radius: 8px;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: #059669;
     color: white;
   }
 `;
@@ -413,6 +440,7 @@ const BoardDetail = () => {
   const [error, setError] = useState(null);
   const [showDebug, setShowDebug] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showCompareModal, setShowCompareModal] = useState(false);
 
 
   // Handle clicks on SVG pins
@@ -628,12 +656,6 @@ const BoardDetail = () => {
         </BackButton>
 
         <BoardHeader>
-          {isAdmin && (
-            <EditButton to={`/admin/boards/${id}/edit`}>
-              <Edit3 size={16} />
-              Edit Board
-            </EditButton>
-          )}
           <BoardTitle>
             {getBoardIcon(board.name)}
             {board.name}
@@ -730,6 +752,19 @@ const BoardDetail = () => {
             </PinoutSection>
 
             <Sidebar>
+              <ButtonContainer>
+                <CompareButton onClick={() => setShowCompareModal(true)}>
+                  <GitCompare size={16} />
+                  Compare
+                </CompareButton>
+                {isAdmin && (
+                  <EditButton to={`/admin/boards/${id}/edit`}>
+                    <Edit3 size={16} />
+                    Edit Board
+                  </EditButton>
+                )}
+              </ButtonContainer>
+              
               <InfoPanel>
                 <PanelTitle>
                   <Info size={20} />
@@ -913,6 +948,12 @@ const BoardDetail = () => {
           </DebugSection>
         </DebugPanel>
       )}
+
+      <CompareModal
+        isOpen={showCompareModal}
+        onClose={() => setShowCompareModal(false)}
+        currentBoard={board}
+      />
     </BoardDetailContainer>
   );
 };
