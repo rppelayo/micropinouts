@@ -1078,11 +1078,21 @@ router.post('/wiring-guide/generate', verifyAdminToken, async (req, res) => {
       microcontrollerBoard: microcontrollerData.board
     }, db);
     
+    // Generate slug for response
+    const sensorSlug = sensorData.board.name.toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    const microSlug = microcontrollerData.board.name.toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    const slug = `${sensorSlug}-to-${microSlug}`;
+    
     db.close();
     
     res.json({
       message: 'Wiring guide generated successfully',
       wiringGuideId: wiringGuideId,
+      slug: slug,
       svgContent: wiringGuideSVG,
       sensorBoard: sensorData.board,
       microcontrollerBoard: microcontrollerData.board,
@@ -1190,6 +1200,7 @@ router.get('/wiring-guide/:id', verifyAdminToken, (req, res) => {
 });
 
 // List all wiring guides
+
 // Helper function to generate wiring guide SVG
 function generateWiringGuideSVG(sensorData, microcontrollerData, connections) {
   const { board: sensorBoard, pins: sensorPins } = sensorData;
@@ -1203,6 +1214,9 @@ function generateWiringGuideSVG(sensorData, microcontrollerData, connections) {
   const sensorDimensions = getSVGDimensions(sensorBoard.svg_content);
   const microcontrollerDimensions = getSVGDimensions(microcontrollerBoard.svg_content);
   
+  // No rotation - use boards as-is
+  const sensorRotation = 0;
+  
   // Set default dimensions if not available
   const sensorWidth = sensorDimensions.width || 200;
   const sensorHeight = sensorDimensions.height || 150;
@@ -1211,20 +1225,65 @@ function generateWiringGuideSVG(sensorData, microcontrollerData, connections) {
   
   // Calculate spacing and positions with larger scale
   const scale = 2.5; // Scale up the boards for better visibility
-  const scaledSensorWidth = sensorWidth * scale;
-  const scaledSensorHeight = sensorHeight * scale;
+  
+  // Calculate effective sensor board dimensions (no rotation)
+  const effectiveSensorWidth = sensorWidth * scale;
+  const effectiveSensorHeight = sensorHeight * scale;
+  
   const scaledMicrocontrollerWidth = microcontrollerWidth * scale;
   const scaledMicrocontrollerHeight = microcontrollerHeight * scale;
   
-  const boardSpacing = Math.max(300, (scaledSensorWidth + scaledMicrocontrollerWidth) * 0.4);
+  const boardSpacing = Math.max(300, (effectiveSensorWidth + scaledMicrocontrollerWidth) * 0.4);
   const padding = 80;
   const sensorX = padding;
-  const microcontrollerX = sensorX + scaledSensorWidth + boardSpacing;
+  const microcontrollerX = sensorX + effectiveSensorWidth + boardSpacing;
   const boardY = padding;
   
-  // Calculate total canvas size
-  const totalWidth = scaledSensorWidth + scaledMicrocontrollerWidth + boardSpacing + (padding * 2);
-  const totalHeight = Math.max(scaledSensorHeight, scaledMicrocontrollerHeight) + (padding * 2) + 120; // Extra space for labels and connections
+  // Calculate actual board bounds to determine required canvas size
+  // For sensor board, use simple positioning (no rotation)
+  const sensorBoardBounds = {
+    left: sensorX,
+    right: sensorX + effectiveSensorWidth,
+    top: boardY,
+    bottom: boardY + effectiveSensorHeight
+  };
+  
+  // Microcontroller board bounds
+  const microcontrollerBoardBounds = {
+    left: microcontrollerX,
+    right: microcontrollerX + scaledMicrocontrollerWidth,
+    top: boardY,
+    bottom: boardY + scaledMicrocontrollerHeight
+  };
+  
+  // Calculate required canvas dimensions based on actual board positions
+  const minX = Math.min(sensorBoardBounds.left, microcontrollerBoardBounds.left);
+  const maxX = Math.max(sensorBoardBounds.right, microcontrollerBoardBounds.right);
+  const minY = Math.min(sensorBoardBounds.top, microcontrollerBoardBounds.top);
+  const maxY = Math.max(sensorBoardBounds.bottom, microcontrollerBoardBounds.bottom);
+  
+  // Ensure we have enough space for both boards with proper padding
+  // If any board extends beyond the current bounds, adjust the canvas size
+  const requiredWidth = Math.max(
+    effectiveSensorWidth + scaledMicrocontrollerWidth + boardSpacing + (padding * 2),
+    (maxX - minX) + (padding * 2)
+  );
+  
+  const requiredHeight = Math.max(
+    Math.max(effectiveSensorHeight, scaledMicrocontrollerHeight) + (padding * 2) + 120,
+    (maxY - minY) + (padding * 2) + 120
+  );
+  
+  const totalWidth = requiredWidth;
+  const totalHeight = requiredHeight;
+  
+  // Debug logging to verify dimensions
+  console.log(`SVG Dimensions - Width: ${totalWidth}, Height: ${totalHeight}`);
+  console.log(`Sensor board: ${effectiveSensorWidth}x${effectiveSensorHeight} (rotation: ${sensorRotation}°)`);
+  console.log(`Microcontroller board: ${scaledMicrocontrollerWidth}x${scaledMicrocontrollerHeight}`);
+  console.log(`Sensor board bounds: left=${sensorBoardBounds.left}, right=${sensorBoardBounds.right}, top=${sensorBoardBounds.top}, bottom=${sensorBoardBounds.bottom}`);
+  console.log(`Microcontroller board bounds: left=${microcontrollerBoardBounds.left}, right=${microcontrollerBoardBounds.right}, top=${microcontrollerBoardBounds.top}, bottom=${microcontrollerBoardBounds.bottom}`);
+  console.log(`Required width: ${requiredWidth}, Required height: ${requiredHeight}`);
   
   // Start building the SVG with calculated dimensions
   let svg = `<svg width="${totalWidth}" height="${totalHeight}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth} ${totalHeight}">
@@ -1242,16 +1301,49 @@ function generateWiringGuideSVG(sensorData, microcontrollerData, connections) {
     <!-- Background -->
     <rect width="${totalWidth}" height="${totalHeight}" fill="#ffffff"/>`;
   
+  // Declare variables for final validation
+  let translateX, translateY;
+  
   // Add sensor board SVG content if it exists
   if (sensorBoard.svg_content) {
     // Extract the content inside the <svg> tag from the sensor board
     const sensorSVGContent = extractSVGContent(sensorBoard.svg_content);
-    svg += `<g transform="translate(${sensorX}, ${boardY}) scale(${scale})">${sensorSVGContent}</g>`;
-    svg += `<text x="${sensorX + (scaledSensorWidth / 2)}" y="${boardY - 10}" class="board-label">${sensorBoard.name}</text>`;
+    
+    // Calculate center position for the sensor board within its allocated space
+    const sensorCenterX = sensorX + (effectiveSensorWidth / 2);
+    const sensorCenterY = boardY + (effectiveSensorHeight / 2);
+    
+    // Simple positioning without rotation
+    translateX = sensorX;
+    translateY = boardY;
+    
+    // Validate that the sensor board is within canvas bounds
+    const sensorBoardBounds = {
+      left: translateX,
+      right: translateX + (sensorWidth * scale),
+      top: translateY,
+      bottom: translateY + (sensorHeight * scale)
+    };
+    
+    console.log(`Sensor board bounds: left=${sensorBoardBounds.left}, right=${sensorBoardBounds.right}, top=${sensorBoardBounds.top}, bottom=${sensorBoardBounds.bottom}`);
+    console.log(`Canvas bounds: width=${totalWidth}, height=${totalHeight}`);
+    
+    // Ensure sensor board is within canvas
+    if (sensorBoardBounds.left < 0 || sensorBoardBounds.right > totalWidth || 
+        sensorBoardBounds.top < 0 || sensorBoardBounds.bottom > totalHeight) {
+      console.warn('Sensor board extends beyond canvas bounds!');
+    }
+    
+    const combinedTransform = `translate(${translateX}, ${translateY}) scale(${scale})`;
+    
+    svg += `<g transform="${combinedTransform}">${sensorSVGContent}</g>`;
+    svg += `<text x="${sensorCenterX}" y="${boardY - 10}" class="board-label">${sensorBoard.name}</text>`;
   } else {
     // Fallback to simple rectangle if no SVG content
-    svg += `<rect x="${sensorX}" y="${boardY}" width="${scaledSensorWidth}" height="${scaledSensorHeight}" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" rx="8"/>
-            <text x="${sensorX + (scaledSensorWidth / 2)}" y="${boardY + 20}" class="board-label">${sensorBoard.name}</text>`;
+    translateX = sensorX;
+    translateY = boardY;
+    svg += `<rect x="${sensorX}" y="${boardY}" width="${effectiveSensorWidth}" height="${effectiveSensorHeight}" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" rx="8"/>
+            <text x="${sensorX + (effectiveSensorWidth / 2)}" y="${boardY + 20}" class="board-label">${sensorBoard.name}</text>`;
   }
   
   // Add microcontroller board SVG content if it exists
@@ -1264,6 +1356,15 @@ function generateWiringGuideSVG(sensorData, microcontrollerData, connections) {
     // Fallback to simple rectangle if no SVG content
     svg += `<rect x="${microcontrollerX}" y="${boardY}" width="${scaledMicrocontrollerWidth}" height="${scaledMicrocontrollerHeight}" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" rx="8"/>
             <text x="${microcontrollerX + (scaledMicrocontrollerWidth / 2)}" y="${boardY + 20}" class="board-label">${microcontrollerBoard.name}</text>`;
+  }
+  
+  // Validate that the microcontroller board is within canvas bounds
+  console.log(`Microcontroller board bounds: left=${microcontrollerBoardBounds.left}, right=${microcontrollerBoardBounds.right}, top=${microcontrollerBoardBounds.top}, bottom=${microcontrollerBoardBounds.bottom}`);
+  
+  // Ensure microcontroller board is within canvas
+  if (microcontrollerBoardBounds.left < 0 || microcontrollerBoardBounds.right > totalWidth || 
+      microcontrollerBoardBounds.top < 0 || microcontrollerBoardBounds.bottom > totalHeight) {
+    console.warn('Microcontroller board extends beyond canvas bounds!');
   }
   
   // Draw connections between boards using straight lines with path planning
@@ -1285,12 +1386,12 @@ function generateWiringGuideSVG(sensorData, microcontrollerData, connections) {
       let sensorPinX, sensorPinY, microcontrollerPinX, microcontrollerPinY;
       
       if (sensorPinPos) {
-        // Use actual pin position from sensor board SVG (scaled)
+        // Simple pin position calculation (no rotation)
         sensorPinX = sensorX + (sensorPinPos.x * scale);
         sensorPinY = boardY + (sensorPinPos.y * scale);
       } else {
-        // Fallback positioning for sensor board
-        sensorPinX = sensorX + scaledSensorWidth;
+        // Fallback positioning for sensor board (pins on right edge after rotation)
+        sensorPinX = sensorX + effectiveSensorWidth;
         sensorPinY = boardY + 50 + (index * 30);
       }
       
@@ -1343,6 +1444,30 @@ function generateWiringGuideSVG(sensorData, microcontrollerData, connections) {
   });
   
   svg += '</svg>';
+  
+  // Final validation - ensure both boards are fully contained
+  console.log('=== SVG Generation Complete ===');
+  console.log(`Final SVG dimensions: ${totalWidth} x ${totalHeight}`);
+  console.log(`Sensor board positioned at: (${translateX}, ${translateY}) with size ${sensorWidth * scale} x ${sensorHeight * scale}`);
+  console.log(`Microcontroller board positioned at: (${microcontrollerX}, ${boardY}) with size ${scaledMicrocontrollerWidth} x ${scaledMicrocontrollerHeight}`);
+  
+  // Verify both boards are within bounds
+  const sensorInBounds = (translateX >= 0 && translateX + (sensorWidth * scale) <= totalWidth && 
+                         translateY >= 0 && translateY + (sensorHeight * scale) <= totalHeight);
+  const microcontrollerInBounds = (microcontrollerX >= 0 && microcontrollerX + scaledMicrocontrollerWidth <= totalWidth && 
+                                  boardY >= 0 && boardY + scaledMicrocontrollerHeight <= totalHeight);
+  
+  if (!sensorInBounds) {
+    console.error('❌ Sensor board is NOT fully contained within SVG bounds!');
+  } else {
+    console.log('✅ Sensor board is fully contained within SVG bounds');
+  }
+  
+  if (!microcontrollerInBounds) {
+    console.error('❌ Microcontroller board is NOT fully contained within SVG bounds!');
+  } else {
+    console.log('✅ Microcontroller board is fully contained within SVG bounds');
+  }
   
   return svg;
 }
@@ -1411,7 +1536,7 @@ function getSVGDimensions(svgContent) {
 // Helper function to find pin position in SVG content
 function findPinPositionInSVG(svgContent, pinName) {
   if (!svgContent || !pinName) {
-    return null;
+      return null;
   }
   
   // Escape special regex characters in pin name
@@ -1476,21 +1601,52 @@ function saveWiringGuide(data, db) {
       .replace(/^-+|-+$/g, '');
     const slug = `${sensorSlug}-to-${microSlug}`;
     
-    db.run(`
-      INSERT INTO wiring_guides (sensor_board_id, microcontroller_board_id, connections, svg_content, description, slug, published, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP)
-    `, [
-      sensorBoardId,
-      microcontrollerBoardId,
-      JSON.stringify(connections),
-      svgContent,
-      description || '',
-      slug
-    ], function(err) {
+    // First, check if a wiring guide with this slug already exists
+    db.get('SELECT id FROM wiring_guides WHERE slug = ?', [slug], (err, existingGuide) => {
       if (err) {
         reject(err);
+        return;
+      }
+      
+      if (existingGuide) {
+        // Update existing wiring guide
+        console.log(`Updating existing wiring guide with ID ${existingGuide.id} and slug "${slug}"`);
+        db.run(`
+          UPDATE wiring_guides 
+          SET connections = ?, svg_content = ?, description = ?
+          WHERE id = ?
+        `, [
+          JSON.stringify(connections),
+          svgContent,
+          description || '',
+          existingGuide.id
+        ], function(err) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(existingGuide.id);
+          }
+        });
       } else {
-        resolve(this.lastID);
+        // Create new wiring guide
+        console.log(`Creating new wiring guide with slug "${slug}"`);
+        db.run(`
+          INSERT INTO wiring_guides (sensor_board_id, microcontroller_board_id, connections, svg_content, description, slug, published, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP)
+        `, [
+          sensorBoardId,
+          microcontrollerBoardId,
+          JSON.stringify(connections),
+          svgContent,
+          description || '',
+          slug
+        ], function(err) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(this.lastID);
+          }
+        });
       }
     });
   });

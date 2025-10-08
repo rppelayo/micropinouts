@@ -894,6 +894,9 @@ const GenerateButton = styled.button`
 `;
 
 const WiringGuideContent = () => {
+  const [viewMode, setViewMode] = useState('create'); // 'create' or 'manage'
+  
+  // Creation state
   const [sensorBoards, setSensorBoards] = useState([]);
   const [microcontrollerBoards, setMicrocontrollerBoards] = useState([]);
   const [selectedSensor, setSelectedSensor] = useState('');
@@ -906,6 +909,15 @@ const WiringGuideContent = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [description, setDescription] = useState('');
   const [currentWiringGuide, setCurrentWiringGuide] = useState(null);
+ // 0, 90, 180, 270 degrees
+  
+  // Management state
+  const [wiringGuides, setWiringGuides] = useState([]);
+  const [manageLoading, setManageLoading] = useState(true);
+  const [manageError, setManageError] = useState(null);
+  const [editingGuide, setEditingGuide] = useState(null);
+  const [editDescription, setEditDescription] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
   
   // Pan/Zoom state
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -1054,7 +1066,7 @@ const WiringGuideContent = () => {
           sensorBoardId: selectedSensor,
           microcontrollerBoardId: selectedMicrocontroller,
           connections: connections,
-          description: description
+          description: description,
         })
       });
 
@@ -1066,14 +1078,15 @@ const WiringGuideContent = () => {
         setCurrentWiringGuide({
           id: result.wiringGuideId,
           published: false,
-          slug: result.slug
+          slug: result.slug,
+          description: description
         });
         setShowPreview(true);
         // Reset pan/zoom when new SVG is generated
         setZoomLevel(1);
         setPanX(0);
         setPanY(0);
-        alert('Wiring guide saved as draft successfully!');
+        alert('Wiring guide generated successfully!');
       } else {
         const error = await response.json();
         alert('Failed to generate wiring guide: ' + error.error);
@@ -1146,343 +1159,40 @@ const WiringGuideContent = () => {
     }
   };
 
-  return (
-    <WiringGuideContainer>
-      <WiringStep>
-        <StepTitle>
-          <Link size={20} />
-          Step 1: Select Boards
-        </StepTitle>
-        <BoardSelector>
-          <SelectorGroup>
-            <SelectorLabel>Sensor Board</SelectorLabel>
-            <BoardSelect value={selectedSensor} onChange={handleSensorChange}>
-              <option value="">Select a sensor board...</option>
-              {sensorBoards.map(board => (
-                <option key={board.id} value={board.id}>
-                  {board.name} ({board.manufacturer})
-                </option>
-              ))}
-            </BoardSelect>
-          </SelectorGroup>
-          
-          <SelectorGroup>
-            <SelectorLabel>Microcontroller Board</SelectorLabel>
-            <BoardSelect value={selectedMicrocontroller} onChange={handleMicrocontrollerChange}>
-              <option value="">Select a microcontroller board...</option>
-              {microcontrollerBoards.map(board => (
-                <option key={board.id} value={board.id}>
-                  {board.name} ({board.manufacturer})
-                </option>
-              ))}
-            </BoardSelect>
-          </SelectorGroup>
-        </BoardSelector>
-      </WiringStep>
+  const saveAsDraft = async () => {
+    if (!currentWiringGuide) return;
+    
+    try {
+      const response = await fetch(`/api/admin/wiring-guide/${currentWiringGuide.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        },
+        body: JSON.stringify({ 
+          description: description,
+          published: false 
+        })
+      });
 
-      {selectedSensor && selectedMicrocontroller && (
-        <WiringStep>
-          <StepTitle>
-            <Link size={20} />
-            Step 2: Connect Pins
-          </StepTitle>
-          
-          {connections.map((connection, index) => (
-            <ConnectionRow key={index}>
-              <PinSelector
-                value={connection.sensorPin}
-                onChange={(e) => updateConnection(index, 'sensorPin', e.target.value)}
-              >
-                <option value="">Select sensor pin...</option>
-                {sensorPins.map(pin => (
-                  <option key={pin.id} value={pin.id}>
-                    {pin.pin_name} ({pin.pin_number})
-                  </option>
-                ))}
-              </PinSelector>
-              
-              <ConnectionArrow>→</ConnectionArrow>
-              
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <PinSelector
-                  value={connection.microcontrollerPin}
-                  onChange={(e) => updateConnection(index, 'microcontrollerPin', e.target.value)}
-                >
-                  <option value="">Select microcontroller pin...</option>
-                  {microcontrollerPins.map(pin => (
-                    <option key={pin.id} value={pin.id}>
-                      {pin.pin_name} ({pin.pin_number})
-                    </option>
-                  ))}
-                </PinSelector>
-                
-                <RemoveConnectionButton onClick={() => removeConnection(index)}>
-                  ×
-                </RemoveConnectionButton>
-              </div>
-            </ConnectionRow>
-          ))}
-          
-          <AddConnectionButton onClick={addConnection}>
-            + Add Connection
-          </AddConnectionButton>
-        </WiringStep>
-      )}
+      if (response.ok) {
+        const result = await response.json();
+        setCurrentWiringGuide(prev => ({ ...prev, published: false, description: description }));
+        alert('Wiring guide saved as draft');
+      } else {
+        const error = await response.json();
+        alert('Failed to save wiring guide: ' + error.error);
+      }
+    } catch (error) {
+      console.error('Failed to save wiring guide:', error);
+      alert('Failed to save wiring guide');
+    }
+  };
 
-      {connections.length > 0 && (
-        <WiringStep>
-          <StepTitle>
-            <Link size={20} />
-            Step 3: Generate Wiring Guide
-          </StepTitle>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-              Description (optional):
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter a description for this wiring guide..."
-              style={{
-                width: '100%',
-                minHeight: '80px',
-                padding: '8px',
-                border: '1px solid #e2e8f0',
-                borderRadius: '6px',
-                fontSize: '14px',
-                resize: 'vertical'
-              }}
-            />
-          </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <GenerateButton onClick={generateWiringGuide} disabled={loading}>
-            {loading ? 'Generating...' : 'Save as Draft'}
-          </GenerateButton>
-        </div>
-        </WiringStep>
-      )}
-
-      {showPreview && generatedSVG && (
-        <WiringStep>
-          <StepTitle>
-            <Link size={20} />
-            Wiring Guide Preview
-            {currentWiringGuide && (
-              <span style={{ 
-                marginLeft: '12px', 
-                padding: '4px 8px', 
-                borderRadius: '4px', 
-                fontSize: '12px', 
-                fontWeight: 'bold',
-                background: currentWiringGuide.published ? '#10b981' : '#f59e0b',
-                color: 'white'
-              }}>
-                {currentWiringGuide.published ? 'PUBLISHED' : 'DRAFT'}
-              </span>
-            )}
-          </StepTitle>
-          <div style={{ 
-            border: '1px solid #e2e8f0', 
-            borderRadius: '8px', 
-            padding: '16px', 
-            background: 'white',
-            overflow: 'hidden',
-            maxHeight: '600px',
-            position: 'relative'
-          }}>
-            <div 
-              id="wiring-guide-svg-container"
-              style={{ 
-                width: '100%', 
-                height: '500px',
-                position: 'relative',
-                overflow: 'hidden',
-                cursor: isDragging ? 'grabbing' : 'grab'
-              }}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              onWheel={handleWheel}
-            >
-              <div
-                style={{
-                  transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel})`,
-                  transformOrigin: 'center center',
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center'
-                }}
-                dangerouslySetInnerHTML={{ __html: generatedSVG }} 
-              />
-            </div>
-            
-            {/* Pan/Zoom Controls */}
-            <div style={{
-              position: 'absolute',
-              top: '20px',
-              right: '20px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px',
-              zIndex: 10
-            }}>
-              {/* Zoom Level Indicator */}
-              <div style={{
-                background: 'white',
-                border: '1px solid #e2e8f0',
-                borderRadius: '6px',
-                padding: '8px 12px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                textAlign: 'center',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                minWidth: '60px'
-              }}>
-                {Math.round(zoomLevel * 100)}%
-              </div>
-              <button
-                onClick={() => zoomWiringGuide(1.2)}
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  background: 'white',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '18px',
-                  fontWeight: 'bold',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                }}
-                title="Zoom In"
-              >
-                +
-              </button>
-              <button
-                onClick={() => zoomWiringGuide(0.8)}
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  background: 'white',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '18px',
-                  fontWeight: 'bold',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                }}
-                title="Zoom Out"
-              >
-                −
-              </button>
-              <button
-                onClick={() => resetWiringGuideZoom()}
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  background: 'white',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                }}
-                title="Reset Zoom"
-              >
-                ⌂
-              </button>
-            </div>
-          </div>
-          <div style={{ marginTop: '16px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            {currentWiringGuide && !currentWiringGuide.published && (
-              <button 
-                onClick={() => publishWiringGuide(true)}
-                style={{
-                  padding: '8px 16px',
-                  background: '#10b981',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
-                }}
-              >
-                📢 Publish
-              </button>
-            )}
-            {currentWiringGuide && currentWiringGuide.published && (
-              <button 
-                onClick={() => publishWiringGuide(false)}
-                style={{
-                  padding: '8px 16px',
-                  background: '#f59e0b',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
-                }}
-              >
-                📝 Unpublish
-              </button>
-            )}
-            {currentWiringGuide && currentWiringGuide.published && (
-              <button 
-                onClick={() => window.open(`/wiring-guide/${currentWiringGuide.slug}`, '_blank')}
-                style={{
-                  padding: '8px 16px',
-                  background: '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
-                }}
-              >
-                👁️ View Public
-              </button>
-            )}
-            <button 
-              onClick={() => setShowPreview(false)}
-              style={{
-                padding: '8px 16px',
-                background: '#6b7280',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer'
-              }}
-            >
-              Close Preview
-            </button>
-          </div>
-        </WiringStep>
-      )}
-    </WiringGuideContainer>
-  );
-};
-
-const ManageWiringGuidesContent = () => {
-  const [wiringGuides, setWiringGuides] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    fetchWiringGuides();
-  }, []);
-
+  // Management functions
   const fetchWiringGuides = async () => {
     try {
-      setLoading(true);
+      setManageLoading(true);
       const response = await fetch('/api/admin/wiring-guides', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
@@ -1492,15 +1202,15 @@ const ManageWiringGuidesContent = () => {
       if (response.ok) {
         const data = await response.json();
         setWiringGuides(data);
-        setError(null);
+        setManageError(null);
       } else {
-        setError('Failed to load wiring guides');
+        setManageError('Failed to load wiring guides');
       }
     } catch (err) {
       console.error('Error fetching wiring guides:', err);
-      setError('Failed to load wiring guides');
+      setManageError('Failed to load wiring guides');
     } finally {
-      setLoading(false);
+      setManageLoading(false);
     }
   };
 
@@ -1553,6 +1263,49 @@ const ManageWiringGuidesContent = () => {
     }
   };
 
+  const openEditModal = (guide) => {
+    setEditingGuide(guide);
+    setEditDescription(guide.description || '');
+  };
+
+  const closeEditModal = () => {
+    setEditingGuide(null);
+    setEditDescription('');
+  };
+
+  const saveEdit = async () => {
+    if (!editingGuide) return;
+    
+    setEditLoading(true);
+    try {
+      const response = await fetch(`/api/admin/wiring-guide/${editingGuide.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        },
+        body: JSON.stringify({ description: editDescription })
+      });
+
+      if (response.ok) {
+        setWiringGuides(prev => 
+          prev.map(guide => 
+            guide.id === editingGuide.id ? { ...guide, description: editDescription } : guide
+          )
+        );
+        closeEditModal();
+        alert('Wiring guide updated successfully');
+      } else {
+        alert('Failed to update wiring guide');
+      }
+    } catch (error) {
+      console.error('Error updating wiring guide:', error);
+      alert('Failed to update wiring guide');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -1563,165 +1316,718 @@ const ManageWiringGuidesContent = () => {
     });
   };
 
-  if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '40px' }}>
-        <div style={{ fontSize: '18px', color: '#6b7280' }}>Loading wiring guides...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ textAlign: 'center', padding: '40px' }}>
-        <div style={{ fontSize: '18px', color: '#dc2626' }}>{error}</div>
-        <button 
-          onClick={fetchWiringGuides}
-          style={{
-            marginTop: '16px',
-            padding: '8px 16px',
-            background: '#3b82f6',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer'
-          }}
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
+  // Load wiring guides when switching to manage mode
+  useEffect(() => {
+    if (viewMode === 'manage') {
+      fetchWiringGuides();
+    }
+  }, [viewMode]);
 
   return (
-    <div>
-      <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ margin: '0 0 8px 0', color: '#1f2937' }}>Manage Wiring Guides</h2>
-        <p style={{ margin: '0', color: '#6b7280' }}>
-          Manage your wiring guides, publish drafts, and view published guides.
-        </p>
+    <WiringGuideContainer>
+      {/* Header with mode toggle */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: '24px',
+        paddingBottom: '16px',
+        borderBottom: '1px solid #e5e7eb'
+      }}>
+        <div>
+          <h2 style={{ margin: '0 0 8px 0', color: '#1f2937' }}>Wiring Guide</h2>
+          <p style={{ margin: '0', color: '#6b7280' }}>
+            {viewMode === 'create' ? 'Create new wiring guides and manage connections' : 'Manage existing wiring guides'}
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            onClick={() => setViewMode('create')}
+            style={{
+              padding: '8px 16px',
+              background: viewMode === 'create' ? '#3b82f6' : '#f3f4f6',
+              color: viewMode === 'create' ? 'white' : '#374151',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <Link size={16} />
+            Create
+          </button>
+          <button
+            onClick={() => setViewMode('manage')}
+            style={{
+              padding: '8px 16px',
+              background: viewMode === 'manage' ? '#3b82f6' : '#f3f4f6',
+              color: viewMode === 'manage' ? 'white' : '#374151',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <FileText size={16} />
+            Manage
+          </button>
+        </div>
       </div>
 
-      {wiringGuides.length === 0 ? (
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '60px 20px',
-          background: '#f9fafb',
-          borderRadius: '8px',
-          border: '1px solid #e5e7eb'
-        }}>
-          <FileText size={48} style={{ color: '#9ca3af', marginBottom: '16px' }} />
-          <h3 style={{ margin: '0 0 8px 0', color: '#6b7280' }}>No wiring guides found</h3>
-          <p style={{ margin: '0', color: '#9ca3af' }}>Create your first wiring guide in the "Wiring Guide" tab.</p>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gap: '16px' }}>
-          {wiringGuides.map((guide) => (
-            <div
-              key={guide.id}
-              style={{
-                background: 'white',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                padding: '20px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}
-            >
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                  <h3 style={{ margin: '0', color: '#1f2937', fontSize: '16px' }}>
-                    {guide.sensor_name} → {guide.microcontroller_name}
-                  </h3>
-                  <span style={{
-                    padding: '2px 8px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    background: guide.published ? '#10b981' : '#f59e0b',
-                    color: 'white'
-                  }}>
-                    {guide.published ? 'PUBLISHED' : 'DRAFT'}
-                  </span>
-                </div>
-                {guide.description && (
-                  <p style={{ margin: '0 0 8px 0', color: '#6b7280', fontSize: '14px' }}>
-                    {guide.description}
-                  </p>
-                )}
-                <div style={{ fontSize: '12px', color: '#9ca3af' }}>
-                  Created: {formatDate(guide.created_at)}
-                </div>
+      {viewMode === 'create' ? (
+        <>
+          <WiringStep>
+            <StepTitle>
+              <Link size={20} />
+              Step 1: Select Boards
+            </StepTitle>
+            <BoardSelector>
+              <SelectorGroup>
+                <SelectorLabel>Sensor Board</SelectorLabel>
+                <BoardSelect value={selectedSensor} onChange={handleSensorChange}>
+                  <option value="">Select a sensor board...</option>
+                  {sensorBoards.map(board => (
+                    <option key={board.id} value={board.id}>
+                      {board.name} ({board.manufacturer})
+                    </option>
+                  ))}
+                </BoardSelect>
+              </SelectorGroup>
+              
+              <SelectorGroup>
+                <SelectorLabel>Microcontroller Board</SelectorLabel>
+                <BoardSelect value={selectedMicrocontroller} onChange={handleMicrocontrollerChange}>
+                  <option value="">Select a microcontroller board...</option>
+                  {microcontrollerBoards.map(board => (
+                    <option key={board.id} value={board.id}>
+                      {board.name} ({board.manufacturer})
+                    </option>
+                  ))}
+                </BoardSelect>
+              </SelectorGroup>
+            </BoardSelector>
+          </WiringStep>
+
+          {selectedSensor && selectedMicrocontroller && (
+            <WiringStep>
+              <StepTitle>
+                <Link size={20} />
+                Step 2: Connect Pins
+              </StepTitle>
+              
+              {connections.map((connection, index) => (
+                <ConnectionRow key={index}>
+                  <PinSelector
+                    value={connection.sensorPin}
+                    onChange={(e) => updateConnection(index, 'sensorPin', e.target.value)}
+                  >
+                    <option value="">Select sensor pin...</option>
+                    {sensorPins.map(pin => (
+                      <option key={pin.id} value={pin.id}>
+                        {pin.pin_name} ({pin.pin_number})
+                      </option>
+                    ))}
+                  </PinSelector>
+                  
+                  <ConnectionArrow>→</ConnectionArrow>
+                  
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <PinSelector
+                      value={connection.microcontrollerPin}
+                      onChange={(e) => updateConnection(index, 'microcontrollerPin', e.target.value)}
+                    >
+                      <option value="">Select microcontroller pin...</option>
+                      {microcontrollerPins.map(pin => (
+                        <option key={pin.id} value={pin.id}>
+                          {pin.pin_name} ({pin.pin_number})
+                        </option>
+                      ))}
+                    </PinSelector>
+                    
+                    <RemoveConnectionButton onClick={() => removeConnection(index)}>
+                      ×
+                    </RemoveConnectionButton>
+                  </div>
+                </ConnectionRow>
+              ))}
+              
+              <AddConnectionButton onClick={addConnection}>
+                + Add Connection
+              </AddConnectionButton>
+            </WiringStep>
+          )}
+
+          {connections.length > 0 && (
+            <WiringStep>
+              <StepTitle>
+                <Link size={20} />
+                Step 3: Generate Wiring Guide
+              </StepTitle>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                  Description (optional):
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Enter a description for this wiring guide..."
+                  style={{
+                    width: '100%',
+                    minHeight: '80px',
+                    padding: '8px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    resize: 'vertical'
+                  }}
+                />
               </div>
               
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <button
-                  onClick={() => togglePublish(guide.id, guide.published)}
-                  style={{
-                    padding: '6px 12px',
-                    background: guide.published ? '#f59e0b' : '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <GenerateButton onClick={generateWiringGuide} disabled={loading}>
+                  {loading ? 'Generating...' : 'Generate'}
+                </GenerateButton>
+              </div>
+            </WiringStep>
+          )}
+
+          {showPreview && generatedSVG && (
+            <WiringStep>
+              <StepTitle>
+                <Link size={20} />
+                Wiring Guide Preview
+                {currentWiringGuide && (
+                  <span style={{ 
+                    marginLeft: '12px', 
+                    padding: '4px 8px', 
+                    borderRadius: '4px', 
+                    fontSize: '12px', 
+                    fontWeight: 'bold',
+                    background: currentWiringGuide.published ? '#10b981' : '#f59e0b',
+                    color: 'white'
+                  }}>
+                    {currentWiringGuide.published ? 'PUBLISHED' : 'DRAFT'}
+                  </span>
+                )}
+              </StepTitle>
+              <div style={{ 
+                border: '1px solid #e2e8f0', 
+                borderRadius: '8px', 
+                padding: '16px', 
+                background: 'white',
+                overflow: 'hidden',
+                maxHeight: '800px',
+                position: 'relative'
+              }}>
+                <div 
+                  id="wiring-guide-svg-container"
+                  style={{ 
+                    width: '100%', 
+                    height: '700px',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    cursor: isDragging ? 'grabbing' : 'grab'
                   }}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseUp}
+                  onWheel={handleWheel}
                 >
-                  {guide.published ? <EyeOff size={14} /> : <Globe size={14} />}
-                  {guide.published ? 'Unpublish' : 'Publish'}
-                </button>
-                
-                {guide.published && (
-                  <button
-                    onClick={() => window.open(`/wiring-guide/${guide.slug}`, '_blank')}
+                  <div
                     style={{
-                      padding: '6px 12px',
+                      transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel})`,
+                      transformOrigin: 'center center',
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}
+                    dangerouslySetInnerHTML={{ __html: generatedSVG }} 
+                  />
+                </div>
+                
+                {/* Pan/Zoom Controls */}
+                <div style={{
+                  position: 'absolute',
+                  top: '20px',
+                  right: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  zIndex: 10
+                }}>
+                  {/* Zoom Level Indicator */}
+                  <div style={{
+                    background: 'white',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    padding: '8px 12px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    textAlign: 'center',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                    minWidth: '60px'
+                  }}>
+                    {Math.round(zoomLevel * 100)}%
+                  </div>
+                  <button
+                    onClick={() => zoomWiringGuide(1.2)}
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      background: 'white',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                    }}
+                    title="Zoom In"
+                  >
+                    +
+                  </button>
+                  <button
+                    onClick={() => zoomWiringGuide(0.8)}
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      background: 'white',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                    }}
+                    title="Zoom Out"
+                  >
+                    −
+                  </button>
+                  <button
+                    onClick={() => resetWiringGuideZoom()}
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      background: 'white',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                    }}
+                    title="Reset Zoom"
+                  >
+                    ⌂
+                  </button>
+                </div>
+              </div>
+              <div style={{ marginTop: '16px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                {currentWiringGuide && !currentWiringGuide.published && (
+                  <button 
+                    onClick={() => publishWiringGuide(true)}
+                    style={{
+                      padding: '8px 16px',
+                      background: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    📢 Publish
+                  </button>
+                )}
+                {currentWiringGuide && (
+                  <button 
+                    onClick={() => saveAsDraft()}
+                    style={{
+                      padding: '8px 16px',
+                      background: '#6b7280',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    💾 Save as Draft
+                  </button>
+                )}
+                {currentWiringGuide && currentWiringGuide.published && (
+                  <button 
+                    onClick={() => publishWiringGuide(false)}
+                    style={{
+                      padding: '8px 16px',
+                      background: '#f59e0b',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    📝 Unpublish
+                  </button>
+                )}
+                {currentWiringGuide && currentWiringGuide.published && (
+                  <button 
+                    onClick={() => window.open(`/wiring-guide/${currentWiringGuide.slug}`, '_blank')}
+                    style={{
+                      padding: '8px 16px',
                       background: '#3b82f6',
                       color: 'white',
                       border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
+                      borderRadius: '6px',
+                      cursor: 'pointer'
                     }}
                   >
-                    <Eye size={14} />
-                    View
+                    👁️ View Public
                   </button>
                 )}
-                
-                <button
-                  onClick={() => deleteWiringGuide(guide.id)}
+                <button 
+                  onClick={() => setShowPreview(false)}
                   style={{
-                    padding: '6px 12px',
-                    background: '#dc2626',
+                    padding: '8px 16px',
+                    background: '#6b7280',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
+                    borderRadius: '6px',
+                    cursor: 'pointer'
                   }}
                 >
-                  <Trash2 size={14} />
-                  Delete
+                  Close Preview
                 </button>
               </div>
+            </WiringStep>
+          )}
+        </>
+      ) : (
+        // Management view
+        <>
+          {manageLoading ? (
+            <div style={{ textAlign: 'center', padding: '40px' }}>
+              <div style={{ fontSize: '18px', color: '#6b7280' }}>Loading wiring guides...</div>
             </div>
-          ))}
+          ) : manageError ? (
+            <div style={{ textAlign: 'center', padding: '40px' }}>
+              <div style={{ fontSize: '18px', color: '#dc2626' }}>{manageError}</div>
+              <button 
+                onClick={fetchWiringGuides}
+                style={{
+                  marginTop: '16px',
+                  padding: '8px 16px',
+                  background: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                Retry
+              </button>
+            </div>
+          ) : wiringGuides.length === 0 ? (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '60px 20px',
+              background: '#f9fafb',
+              borderRadius: '8px',
+              border: '1px solid #e5e7eb'
+            }}>
+              <FileText size={48} style={{ color: '#9ca3af', marginBottom: '16px' }} />
+              <h3 style={{ margin: '0 0 8px 0', color: '#6b7280' }}>No wiring guides found</h3>
+              <p style={{ margin: '0', color: '#9ca3af' }}>Create your first wiring guide using the "Create" tab.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '16px' }}>
+              {wiringGuides.map((guide) => (
+                <div
+                  key={guide.id}
+                  style={{
+                    background: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '20px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                      <h3 style={{ margin: '0', color: '#1f2937', fontSize: '16px' }}>
+                        {guide.sensor_name} → {guide.microcontroller_name}
+                      </h3>
+                      <span style={{
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        background: guide.published ? '#10b981' : '#f59e0b',
+                        color: 'white'
+                      }}>
+                        {guide.published ? 'PUBLISHED' : 'DRAFT'}
+                      </span>
+                    </div>
+                    {guide.description && (
+                      <p style={{ margin: '0 0 8px 0', color: '#6b7280', fontSize: '14px' }}>
+                        {guide.description}
+                      </p>
+                    )}
+                    <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                      Created: {formatDate(guide.created_at)}
+                    </div>
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <button
+                      onClick={() => openEditModal(guide)}
+                      style={{
+                        padding: '6px 12px',
+                        background: '#6b7280',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Edit size={14} />
+                      Edit
+                    </button>
+                    
+                    <button
+                      onClick={() => togglePublish(guide.id, guide.published)}
+                      style={{
+                        padding: '6px 12px',
+                        background: guide.published ? '#f59e0b' : '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      {guide.published ? <EyeOff size={14} /> : <Globe size={14} />}
+                      {guide.published ? 'Unpublish' : 'Publish'}
+                    </button>
+                    
+                    {guide.published && (
+                      <button
+                        onClick={() => window.open(`/wiring-guide/${guide.slug}`, '_blank')}
+                        style={{
+                          padding: '6px 12px',
+                          background: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Eye size={14} />
+                        View
+                      </button>
+                    )}
+                    
+                    <button
+                      onClick={() => deleteWiringGuide(guide.id)}
+                      style={{
+                        padding: '6px 12px',
+                        background: '#dc2626',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Trash2 size={14} />
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Edit Modal */}
+      {editingGuide && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '8px',
+            padding: '24px',
+            width: '500px',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px'
+            }}>
+              <h3 style={{ margin: 0, color: '#1f2937' }}>
+                Edit Wiring Guide
+              </h3>
+              <button
+                onClick={closeEditModal}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '20px',
+                  cursor: 'pointer',
+                  color: '#6b7280'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontWeight: '500',
+                color: '#374151'
+              }}>
+                Wiring Guide
+              </label>
+              <div style={{
+                padding: '12px',
+                background: '#f9fafb',
+                borderRadius: '6px',
+                color: '#6b7280',
+                fontSize: '14px'
+              }}>
+                {editingGuide.sensor_name} → {editingGuide.microcontroller_name}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontWeight: '500',
+                color: '#374151'
+              }}>
+                Description
+              </label>
+              <textarea
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="Enter a description for this wiring guide..."
+                style={{
+                  width: '100%',
+                  minHeight: '100px',
+                  padding: '12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                  resize: 'vertical'
+                }}
+              />
+            </div>
+
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={closeEditModal}
+                disabled={editLoading}
+                style={{
+                  padding: '8px 16px',
+                  background: '#f3f4f6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: editLoading ? 'not-allowed' : 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={editLoading}
+                style={{
+                  padding: '8px 16px',
+                  background: editLoading ? '#9ca3af' : '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: editLoading ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                {editLoading && <div style={{
+                  width: '12px',
+                  height: '12px',
+                  border: '2px solid transparent',
+                  borderTop: '2px solid white',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />}
+                {editLoading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
-    </div>
+    </WiringGuideContainer>
   );
 };
+
 
 const Admin = () => {
   const { isAuthenticated, token, login, logout, verifyToken } = useAuth();
@@ -2330,13 +2636,6 @@ const Admin = () => {
             <Link size={20} />
             Wiring Guide
           </Tab>
-          <Tab 
-            $active={activeTab === 'manage-wiring'} 
-            onClick={() => setActiveTab('manage-wiring')}
-          >
-            <FileText size={20} />
-            Manage Wiring Guides
-          </Tab>
         </TabsContainer>
 
         {activeTab === 'boards' && (
@@ -2533,12 +2832,6 @@ const Admin = () => {
         {activeTab === 'wiring' && (
           <TabContent>
             <WiringGuideContent />
-          </TabContent>
-        )}
-
-        {activeTab === 'manage-wiring' && (
-          <TabContent>
-            <ManageWiringGuidesContent />
           </TabContent>
         )}
 
