@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Upload Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .form-group { margin: 10px 0; }
+        label { display: block; margin-bottom: 5px; }
+        input[type="file"] { margin-bottom: 10px; }
+        button { padding: 10px 20px; background: #007cba; color: white; border: none; cursor: pointer; }
+        button:hover { background: #005a87; }
+        .result { margin-top: 20px; padding: 10px; background: #f0f0f0; border-radius: 5px; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+    </style>
+</head>
+<body>
+    <h1>Simple Upload Test</h1>
+    
+    <form id="uploadForm">
+        <div class="form-group">
+            <label for="fritzingFile">Select Fritzing File (.fzpz):</label>
+            <input type="file" id="fritzingFile" name="fritzingFile" accept=".fzpz" required>
+        </div>
+        
+        <button type="submit">Upload and Test</button>
+    </form>
+    
+    <div id="result" class="result" style="display: none;"></div>
+    
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = 'Uploading and testing...';
+            
+            try {
+                const formData = new FormData();
+                formData.append('fritzingFile', document.getElementById('fritzingFile').files[0]);
+                
+                const response = await fetch('simple-upload-test.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = '<h3>Success!</h3><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = '<h3>Error:</h3><p>' + data.error + '</p>';
+                }
+                
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = '<h3>Error:</h3><p>' + error.message + '</p>';
+            }
+        });
+    </script>
+</body>
+</html>

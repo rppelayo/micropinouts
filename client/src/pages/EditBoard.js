@@ -576,18 +576,20 @@ const EditBoard = () => {
           'Content-Type': 'application/json'
         };
 
+        const { adminBoardsAPI, adminPinGroupsAPI, adminCategoriesAPI } = await import('../services/adminApi');
+        
         const [boardResponse, pinsResponse, groupsResponse, categoriesResponse] = await Promise.all([
-          fetch(`/api/admin/boards/${id}`, { headers }).then(res => res.json()),
-          fetch(`/api/admin/boards/${id}/pins`, { headers }).then(res => res.json()),
-          fetch(`/api/admin/pin-groups`, { headers }).then(res => res.json()),
-          fetch(`/api/admin/categories`, { headers }).then(res => res.json())
+          adminBoardsAPI.getById(id),
+          adminBoardsAPI.getPins(id),
+          adminPinGroupsAPI.getAll(),
+          adminCategoriesAPI.getAll()
         ]);
         
         // Extract data from API responses
-        const boardData = boardResponse.data || boardResponse;
-        const pinsData = pinsResponse.data || pinsResponse;
-        const groupsData = groupsResponse.data || groupsResponse;
-        const categoriesData = categoriesResponse.data || categoriesResponse;
+        const boardData = boardResponse.data;
+        const pinsData = pinsResponse.data;
+        const groupsData = groupsResponse.data;
+        const categoriesData = categoriesResponse.data;
         
         console.log('Board data:', boardData);
         console.log('Pins data:', pinsData);

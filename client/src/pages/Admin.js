@@ -935,35 +935,22 @@ const WiringGuideContent = () => {
       const token = localStorage.getItem('adminToken');
       
       // Fetch sensor boards
-      const sensorResponse = await fetch('/api/admin/wiring-guide/boards?category=sensor-module', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const { adminBoardsAPI } = await import('../services/adminApi');
+      const sensorResponse = await adminBoardsAPI.getByCategory('sensor-module');
+      const microcontrollerResponse = await adminBoardsAPI.getByCategory('microcontroller-8bit,microcontroller-16bit,microcontroller-32bit,development-board');
       
-      // Fetch microcontroller boards
-      const microcontrollerResponse = await fetch('/api/admin/wiring-guide/boards?category=microcontroller-8bit,microcontroller-16bit,microcontroller-32bit,development-board', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (sensorResponse.ok && microcontrollerResponse.ok) {
-        const sensors = await sensorResponse.json();
-        const microcontrollers = await microcontrollerResponse.json();
+      if (sensorResponse.status === 200 && microcontrollerResponse.status === 200) {
+        const sensors = sensorResponse.data;
+        const microcontrollers = microcontrollerResponse.data;
         
         setSensorBoards(sensors);
         setMicrocontrollerBoards(microcontrollers);
       } else {
         // Fallback to old method if new API fails
-        const response = await fetch('/api/admin/boards', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await adminBoardsAPI.getAll();
         
-        if (response.ok) {
-          const boards = await response.json();
+        if (response.status === 200) {
+          const boards = response.data;
           
           // Filter boards by category field or fallback to name-based heuristics
           const sensors = boards.filter(board => 
@@ -1056,41 +1043,30 @@ const WiringGuideContent = () => {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/wiring-guide/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-        },
-        body: JSON.stringify({
-          sensorBoardId: selectedSensor,
-          microcontrollerBoardId: selectedMicrocontroller,
-          connections: connections,
-          description: description,
-        })
+      const { adminWiringGuideAPI } = await import('../services/adminApi');
+      const response = await adminWiringGuideAPI.generate({
+        sensorBoardId: selectedSensor,
+        microcontrollerBoardId: selectedMicrocontroller,
+        connections: connections,
+        description: description,
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        // Handle the generated wiring guide
-        console.log('Wiring guide generated:', result);
-        setGeneratedSVG(result.svgContent);
-        setCurrentWiringGuide({
-          id: result.wiringGuideId,
-          published: false,
-          slug: result.slug,
-          description: description
-        });
-        setShowPreview(true);
-        // Reset pan/zoom when new SVG is generated
-        setZoomLevel(1);
-        setPanX(0);
-        setPanY(0);
-        alert('Wiring guide generated successfully!');
-      } else {
-        const error = await response.json();
-        alert('Failed to generate wiring guide: ' + error.error);
-      }
+      const result = response.data;
+      // Handle the generated wiring guide
+      console.log('Wiring guide generated:', result);
+      setGeneratedSVG(result.data.svgContent);
+      setCurrentWiringGuide({
+        id: result.data.wiringGuideId,
+        published: false,
+        slug: result.data.slug,
+        description: description
+      });
+      setShowPreview(true);
+      // Reset pan/zoom when new SVG is generated
+      setZoomLevel(1);
+      setPanX(0);
+      setPanY(0);
+      alert('Wiring guide generated successfully!');
     } catch (error) {
       console.error('Failed to generate wiring guide:', error);
       alert('Failed to generate wiring guide');
@@ -1193,14 +1169,11 @@ const WiringGuideContent = () => {
   const fetchWiringGuides = async () => {
     try {
       setManageLoading(true);
-      const response = await fetch('/api/admin/wiring-guides', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-        }
-      });
+      const { adminWiringGuidesAPI } = await import('../services/adminApi');
+      const response = await adminWiringGuidesAPI.getAll();
       
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status === 200) {
+        const data = response.data;
         setWiringGuides(data);
         setManageError(null);
       } else {
@@ -2030,6 +2003,7 @@ const WiringGuideContent = () => {
 
 
 const Admin = () => {
+  console.log('🔍 Admin component loaded - debugging is working!');
   const { isAuthenticated, token, login, logout, verifyToken } = useAuth();
   const [activeTab, setActiveTab] = useState('boards');
   const [boards, setBoards] = useState([]);
@@ -2053,6 +2027,11 @@ const Admin = () => {
   const [lastFetchTime, setLastFetchTime] = useState(0);
   const [loadingOperations, setLoadingOperations] = useState(new Set());
   const [showModal, setShowModal] = useState(false);
+
+  // Debug modal state changes
+  useEffect(() => {
+    console.log('🔍 showModal state changed:', showModal);
+  }, [showModal]);
   const [editingBoard, setEditingBoard] = useState(null);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [fritzingData, setFritzingData] = useState(null);
@@ -2078,6 +2057,11 @@ const Admin = () => {
     category: ''
   });
 
+  // Debug boardForm changes
+  useEffect(() => {
+    console.log('🔍 boardForm state changed:', boardForm);
+  }, [boardForm]);
+
   useEffect(() => {
     if (token && isAuthenticated) {
       fetchBoards();
@@ -2087,11 +2071,14 @@ const Admin = () => {
 
   // Handle pending modal open after form is updated
   useEffect(() => {
+    console.log('🔍 Modal useEffect triggered - pendingModalOpen:', pendingModalOpen, 'fritzingData:', !!fritzingData);
     if (pendingModalOpen && fritzingData) {
+      console.log('🔍 Opening modal with fritzingData:', fritzingData);
+      console.log('🔍 Current boardForm state:', boardForm);
       setShowModal(true);
       setPendingModalOpen(false);
     }
-  }, [pendingModalOpen, fritzingData, boardForm]);
+  }, [pendingModalOpen, fritzingData]);
 
 
   const handleLogin = async (e) => {
@@ -2144,28 +2131,21 @@ const Admin = () => {
     
     try {
       // Load all boards at once for fast client-side filtering
-      const response = await fetch('/api/admin/boards', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const { adminBoardsAPI } = await import('../services/adminApi');
+      const response = await adminBoardsAPI.getAll();
 
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Handle both array and paginated response formats
-        const boardsData = Array.isArray(data) ? data : (data.boards || data.pinouts || []);
-        
-        setBoards(boardsData);
-        setTotalBoards(boardsData.length);
-        
-        // Cache the result
-        setBoardsCache(prev => new Map(prev).set('all-boards', boardsData));
-        setLastFetchTime(now);
-        setError(null);
-      } else {
-        setError('Failed to load boards');
-      }
+      const data = response.data;
+      
+      // Handle both array and paginated response formats
+      const boardsData = Array.isArray(data) ? data : (data.boards || data.pinouts || []);
+      
+      setBoards(boardsData);
+      setTotalBoards(boardsData.length);
+      
+      // Cache the result
+      setBoardsCache(prev => new Map(prev).set('all-boards', boardsData));
+      setLastFetchTime(now);
+      setError(null);
     } catch (error) {
       console.error('Failed to fetch boards:', error);
       setError('Failed to load boards. Please check your connection.');
@@ -2254,6 +2234,7 @@ const Admin = () => {
   };
 
   const handleFileUpload = async (file) => {
+    console.log('🔍 handleFileUpload called with file:', file.name);
     setLoading(true);
     setError(null);
 
@@ -2261,26 +2242,31 @@ const Admin = () => {
       const formData = new FormData();
       formData.append('fritzingFile', file);
 
-      const response = await fetch('/api/admin/upload-fritzing', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
+      console.log('🔍 Sending request to upload API...');
+      const { adminUploadAPI } = await import('../services/adminApi');
+      const response = await adminUploadAPI.uploadFritzing(formData);
 
-      const data = await response.json();
-      
+      console.log('🔍 API response received:', response);
+      const data = response.data;
+      console.log('🔍 Response data structure:', data);
+      console.log('🔍 Looking for boardMetadata in:', data.data);
 
-      if (response.ok) {
+      if (response.status === 200) {
         setFritzingData(data.data);
         
         // Pre-fill form with extracted board metadata
-        if (data.data.boardMetadata) {
-          const metadata = data.data.boardMetadata;
+        if (data.data && data.data.data && data.data.data.boardMetadata) {
+          const metadata = data.data.data.boardMetadata;
+          console.log('🔍 Board metadata received:', metadata);
+          
+          // Clean up HTML from description
+          const cleanDescription = metadata.description 
+            ? metadata.description.replace(/<[^>]*>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').trim()
+            : '';
+          
           const newFormData = {
             name: metadata.title || '',
-            description: metadata.description || '',
+            description: cleanDescription,
             manufacturer: metadata.manufacturer || '',
             package_type: metadata.package_type || '',
             voltage_range: metadata.voltage_range || '',
@@ -2289,15 +2275,25 @@ const Admin = () => {
             ram: metadata.ram || '',
             image_url: ''
           };
+          
+          console.log('🔍 Setting form data:', newFormData);
           setBoardForm(newFormData);
+          
+          // Verify the form was set immediately
+          console.log('🔍 Form data being set to:', newFormData);
+        } else {
+          console.log('❌ No boardMetadata found in response');
         }
         
         setSuccess('Fritzing file parsed successfully!');
+        console.log('🔍 Setting pendingModalOpen to true');
         setPendingModalOpen(true);
       } else {
         setError(data.error || 'Failed to parse Fritzing file');
       }
     } catch (error) {
+      console.error('🔍 Upload error:', error);
+      console.error('🔍 Error response:', error.response);
       setError('Failed to upload file. Please try again.');
     } finally {
       setLoading(false);
@@ -2330,21 +2326,12 @@ const Admin = () => {
     setError(null);
 
     try {
-      const response = await fetch('/api/admin/boards/from-fritzing', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          boardData: boardForm,
-          fritzingData: fritzingData
-        })
-      });
+      const { adminBoardsAPI } = await import('../services/adminApi');
+      const response = await adminBoardsAPI.createFromFritzing(boardForm, fritzingData);
 
-      const data = await response.json();
+      const data = response.data;
 
-      if (response.ok) {
+      if (response.status === 200) {
         setSuccess('Board created successfully!');
         setShowModal(false);
         setBoardForm({
@@ -2396,16 +2383,12 @@ const Admin = () => {
     setBoards(prevBoards => prevBoards.filter(board => board.id !== boardId));
 
     try {
-      const response = await fetch(`/api/admin/boards/${boardId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const { adminBoardsAPI } = await import('../services/adminApi');
+      const response = await adminBoardsAPI.delete(boardId);
 
       console.log('Delete response status:', response.status);
 
-      if (response.ok) {
+      if (response.status === 200) {
         setSuccess('Board deleted successfully!');
         console.log('Board deleted successfully, refreshing data...');
         // Clear cache and refresh data to ensure consistency
@@ -2414,14 +2397,11 @@ const Admin = () => {
         
         // Force a fresh fetch by calling the API directly
         try {
-          const refreshResponse = await fetch('/api/admin/boards', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
+          const { adminBoardsAPI } = await import('../services/adminApi');
+          const refreshResponse = await adminBoardsAPI.getAll();
           
-          if (refreshResponse.ok) {
-            const refreshData = await refreshResponse.json();
+          if (refreshResponse.status === 200) {
+            const refreshData = refreshResponse.data;
             const boardsData = Array.isArray(refreshData) ? refreshData : (refreshData.boards || refreshData.pinouts || []);
             console.log('Fresh data fetched:', boardsData.length, 'boards');
             setBoards(boardsData);
@@ -2436,8 +2416,7 @@ const Admin = () => {
         
         console.log('Data refreshed after delete');
       } else {
-        const errorData = await response.json();
-        console.error('Delete failed:', errorData);
+        console.error('Delete failed:', response.data);
         setError('Failed to delete board');
         // Revert optimistic update on error
         if (boardToDelete) {
@@ -2487,18 +2466,12 @@ const Admin = () => {
     );
 
     try {
-      const response = await fetch(`/api/admin/boards/${boardId}/publish`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ published })
-      });
+      const { adminBoardsAPI } = await import('../services/adminApi');
+      const response = await adminBoardsAPI.publish(boardId, published);
 
       console.log('Publish response status:', response.status);
 
-      if (response.ok) {
+      if (response.status === 200) {
         setSuccess(`Board ${published ? 'published' : 'unpublished'} successfully!`);
         // Clear cache and refresh data to ensure consistency
         setBoardsCache(new Map());
@@ -2506,14 +2479,11 @@ const Admin = () => {
         
         // Force a fresh fetch by calling the API directly
         try {
-          const refreshResponse = await fetch('/api/admin/boards', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
+          const { adminBoardsAPI } = await import('../services/adminApi');
+          const refreshResponse = await adminBoardsAPI.getAll();
           
-          if (refreshResponse.ok) {
-            const refreshData = await refreshResponse.json();
+          if (refreshResponse.status === 200) {
+            const refreshData = refreshResponse.data;
             const boardsData = Array.isArray(refreshData) ? refreshData : (refreshData.boards || refreshData.pinouts || []);
             console.log('Fresh data fetched after publish:', boardsData.length, 'boards');
             setBoards(boardsData);

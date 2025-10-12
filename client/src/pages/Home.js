@@ -603,24 +603,21 @@ const Home = () => {
     
     try {
       // Load all boards at once for fast client-side filtering
-      const response = await fetch('/api/boards');
+      const { boardsAPI } = await import('../services/api');
+      const response = await boardsAPI.getAll();
       
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Handle both array and paginated response formats
-        const boardsData = Array.isArray(data) ? data : (data.pinouts || []);
-        
-        setBoards(boardsData);
-        setTotalBoards(boardsData.length);
-        
-        // Cache the result
-        setBoardsCache(prev => new Map(prev).set('all-boards', boardsData));
-        setLastFetchTime(now);
-        setError(null);
-      } else {
-        setError('Failed to load boards');
-      }
+      const data = response.data;
+      
+      // Handle both array and paginated response formats
+      const boardsData = Array.isArray(data) ? data : (data.pinouts || []);
+      
+      setBoards(boardsData);
+      setTotalBoards(boardsData.length);
+      
+      // Cache the result
+      setBoardsCache(prev => new Map(prev).set('all-boards', boardsData));
+      setLastFetchTime(now);
+      setError(null);
     } catch (error) {
       console.error('Failed to fetch boards:', error);
       setError('Failed to load boards. Please check your connection.');

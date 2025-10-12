@@ -32,20 +32,14 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     try {
-      const response = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username, password })
-      });
+      const { adminAuth } = await import('../services/adminApi');
+      const response = await adminAuth.login(username, password);
+      const data = response.data;
 
-      const data = await response.json();
-
-      if (response.ok) {
-        localStorage.setItem('adminToken', data.token);
+      if (response.status === 200) {
+        localStorage.setItem('adminToken', data.data.token);
         localStorage.setItem('adminUser', JSON.stringify({ username }));
-        setToken(data.token);
+        setToken(data.data.token);
         setUser({ username });
         setIsAuthenticated(true);
         return { success: true };
@@ -69,18 +63,9 @@ export const AuthProvider = ({ children }) => {
     if (!token) return false;
     
     try {
-      const response = await fetch('/api/admin/boards', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (response.ok) {
-        return true;
-      } else {
-        logout();
-        return false;
-      }
+      const { adminBoardsAPI } = await import('../services/adminApi');
+      await adminBoardsAPI.getAll();
+      return true;
     } catch (error) {
       logout();
       return false;
