@@ -63,9 +63,21 @@ export const AuthProvider = ({ children }) => {
     if (!token) return false;
     
     try {
-      const { adminBoardsAPI } = await import('../services/adminApi');
-      await adminBoardsAPI.getAll();
-      return true;
+      // Use a simple token verification endpoint instead of loading boards
+      const response = await fetch('http://localhost:8080/micropinouts/api-php/admin/verify-token', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        return true;
+      } else {
+        logout();
+        return false;
+      }
     } catch (error) {
       logout();
       return false;

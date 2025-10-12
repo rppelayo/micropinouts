@@ -131,7 +131,7 @@ const WiringGuides = () => {
   const fetchWiringGuides = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/wiring-guides');
+      const response = await fetch('http://localhost:8080/micropinouts/api-php/wiring-guides');
       
       if (response.ok) {
         const data = await response.json();

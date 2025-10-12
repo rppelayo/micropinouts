@@ -49,7 +49,7 @@ export const adminPinsAPI = {
   delete: (id) => adminApi.delete(`/admin/pins/${id}`)
 };
 
-// Admin Wiring Guides API
+// Admin Wiring Guides API (plural - for managing existing guides)
 export const adminWiringGuidesAPI = {
   getAll: () => adminApi.get('/admin/wiring-guides'),
   getById: (id) => adminApi.get(`/admin/wiring-guide/${id}`),
@@ -80,14 +80,9 @@ export const adminUploadAPI = {
   testFritzingData: () => adminApi.post('/admin/test-fritzing-data')
 };
 
-// Admin Wiring Guide API
+// Admin Wiring Guide API (singular - for generating new guides)
 export const adminWiringGuideAPI = {
-  generate: (data) => adminApi.post('/admin/wiring-guide/generate', data),
-  getAll: () => adminApi.get('/admin/wiring-guides'),
-  getById: (id) => adminApi.get(`/admin/wiring-guide/${id}`),
-  update: (id, data) => adminApi.put(`/admin/wiring-guide/${id}`, data),
-  publish: (id, published) => adminApi.put(`/admin/wiring-guide/${id}/publish`, { published }),
-  delete: (id) => adminApi.delete(`/admin/wiring-guide/${id}`)
+  generate: (data) => adminApi.post('/admin/wiring-guide/generate', data)
 };
 
 export default adminApi;

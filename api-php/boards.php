@@ -7,18 +7,15 @@ $pdo = initializeDatabase();
 // Get request method and path
 $method = $_SERVER['REQUEST_METHOD'];
 $path = $_SERVER['REQUEST_URI'];
+$pathParts = explode('/', trim(parse_url($path, PHP_URL_PATH), '/'));
 
-// Extract the path after the script directory
-$scriptDir = dirname($_SERVER['SCRIPT_NAME']);
-$path = str_replace($scriptDir, '', $path);
-$path = trim($path, '/');
-
-// Handle direct access to index.php with path (e.g., index.php/boards)
-if (strpos($path, 'index.php/') === 0) {
-    $path = substr($path, 10); // Remove 'index.php/' from the beginning
+// Remove 'micropinouts' and 'api-php' from path if present
+if (isset($pathParts[0]) && $pathParts[0] === 'micropinouts') {
+    array_shift($pathParts);
 }
-
-$pathParts = $path ? explode('/', $path) : [];
+if (isset($pathParts[0]) && $pathParts[0] === 'api-php') {
+    array_shift($pathParts);
+}
 
 // Route handling
 try {

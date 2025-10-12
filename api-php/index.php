@@ -58,13 +58,21 @@ if (empty($pathParts) || $pathParts[0] === '') {
 } elseif ($pathParts[0] === 'pins') {
     require_once 'pins.php';
 } elseif ($pathParts[0] === 'pin-groups') {
-    require_once 'pin-groups.php';
+require_once 'pin-groups.php';
+} elseif ($pathParts[0] === 'wiring-guides') {
+require_once 'wiring-guides.php';
+} elseif ($pathParts[0] === 'wiring-guide') {
+require_once 'wiring-guides.php';
 } elseif ($pathParts[0] === 'admin') {
     // Admin routes
     error_log("Admin routing - Path parts: " . print_r($pathParts, true));
     if (count($pathParts) === 2 && $pathParts[1] === 'login') {
         error_log("Routing to admin.php");
         require_once 'admin.php';
+    } elseif (count($pathParts) === 2 && $pathParts[1] === 'verify-token') {
+        error_log("Routing to admin verify-token");
+        verifyAdminToken();
+        jsonResponse(['valid' => true, 'message' => 'Token is valid']);
     } elseif (count($pathParts) === 2 && $pathParts[1] === 'upload-fritzing') {
         error_log("Routing to admin-upload.php");
         require_once 'admin-upload.php';
@@ -80,6 +88,12 @@ if (empty($pathParts) || $pathParts[0] === '') {
     } elseif (count($pathParts) >= 2 && $pathParts[1] === 'categories') {
         error_log("Routing to admin-pin-groups.php for categories");
         require_once 'admin-pin-groups.php';
+    } elseif (count($pathParts) >= 2 && $pathParts[1] === 'wiring-guides') {
+        error_log("Routing to admin-wiring-guides.php");
+        require_once 'admin-wiring-guides.php';
+    } elseif (count($pathParts) >= 2 && $pathParts[1] === 'wiring-guide') {
+        error_log("Routing to admin-wiring-guides.php for single wiring guide");
+        require_once 'admin-wiring-guides.php';
     } elseif (count($pathParts) >= 2 && $pathParts[1] === 'upload-fritzing') {
         error_log("Routing to admin-upload.php");
         require_once 'admin-upload.php';

@@ -121,7 +121,10 @@ const Header = () => {
             <GitCompare size={20} />
             Compare
           </NavLink>
-          <NavLink to="/wiring-guides" $active={location.pathname === '/wiring-guides'}>
+          <NavLink 
+            to={isAuthenticated ? "/admin?tab=wiring" : "/wiring-guides"} 
+            $active={location.pathname === '/wiring-guides' || (isAuthenticated && location.pathname === '/admin')}
+          >
             <LinkIcon size={20} />
             Wiring Guides
           </NavLink>

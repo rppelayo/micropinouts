@@ -32,6 +32,8 @@ if (isset($pathParts[0]) && $pathParts[0] === 'api-php') {
 
 // Debug logging
 error_log("Admin-boards.php - Path parts: " . print_r($pathParts, true));
+error_log("Admin-boards.php - Request URI: " . $_SERVER['REQUEST_URI']);
+error_log("Admin-boards.php - Request Method: " . $_SERVER['REQUEST_METHOD']);
 
 // Route handling
 try {
@@ -224,7 +226,10 @@ function createBoard($pdo) {
 function updateBoard($pdo, $identifier) {
     verifyAdminToken();
     
+    error_log("updateBoard called with identifier: " . $identifier);
+    
     $input = json_decode(file_get_contents('php://input'), true);
+    error_log("updateBoard input: " . json_encode($input));
     
     if (!$input || !isset($input['name'])) {
         errorResponse('Board name is required');
@@ -249,21 +254,95 @@ function updateBoard($pdo, $identifier) {
     $isNumeric = is_numeric($identifier);
     $whereClause = $isNumeric ? "id = ?" : "slug = ?";
     
-    $stmt = $pdo->prepare("
-        UPDATE boards 
-        SET name = ?, description = ?, manufacturer = ?, package_type = ?, pin_count = ?, 
-            voltage_range = ?, clock_speed = ?, flash_memory = ?, ram = ?, image_url = ?, slug = ?, link = ?, category = ?
-        WHERE $whereClause
-    ");
+    error_log("updateBoard - isNumeric: " . ($isNumeric ? 'true' : 'false'));
+    error_log("updateBoard - whereClause: " . $whereClause);
+    error_log("updateBoard - identifier: " . $identifier);
+    error_log("updateBoard - new slug: " . $slug);
     
-    $stmt->execute([
-        $name, $description, $manufacturer, $package_type, $pin_count, 
-        $voltage_range, $clock_speed, $flash_memory, $ram, $image_url, 
-        $slug, $link, $category, $identifier
-    ]);
+    // First, get the current board to check if slug needs updating
+    $currentStmt = $pdo->prepare("SELECT slug FROM boards WHERE $whereClause");
+    $currentStmt->execute([$identifier]);
+    $currentBoard = $currentStmt->fetch();
     
-    if ($stmt->rowCount() === 0) {
+    if (!$currentBoard) {
+        error_log("updateBoard - Board not found in initial check");
         errorResponse('Board not found', 404);
+    }
+    
+    error_log("updateBoard - current slug: " . $currentBoard['slug']);
+    
+    // Only update slug if it's different
+    if ($currentBoard['slug'] === $slug) {
+        // Slug is the same, don't update it
+        error_log("updateBoard - Using UPDATE without slug");
+        $stmt = $pdo->prepare("
+            UPDATE boards 
+            SET name = ?, description = ?, manufacturer = ?, package_type = ?, pin_count = ?,
+                voltage_range = ?, clock_speed = ?, flash_memory = ?, ram = ?, image_url = ?, link = ?, category = ?
+            WHERE $whereClause
+        ");
+        
+        $params = [
+            $name, $description, $manufacturer, $package_type, $pin_count, 
+            $voltage_range, $clock_speed, $flash_memory, $ram, $image_url, 
+            $link, $category, $identifier
+        ];
+        
+        error_log("updateBoard - identifier value: '" . $identifier . "'");
+        error_log("updateBoard - Parameters count: " . count($params));
+        error_log("updateBoard - Parameters: " . json_encode($params));
+        error_log("updateBoard - SQL: UPDATE boards SET name = ?, description = ?, manufacturer = ?, package_type = ?, pin_count = ?, voltage_range = ?, clock_speed = ?, flash_memory = ?, ram = ?, image_url = ?, link = ?, category = ? WHERE $whereClause");
+        
+        try {
+            $stmt->execute($params);
+            error_log("updateBoard - UPDATE query executed successfully");
+        } catch (Exception $e) {
+            error_log("updateBoard - UPDATE query failed: " . $e->getMessage());
+        }
+        
+        // Debug: Check if the WHERE clause is working
+        $debugStmt = $pdo->prepare("SELECT id, name, slug FROM boards WHERE slug = ?");
+        $debugStmt->execute([$identifier]);
+        $debugResult = $debugStmt->fetch();
+        error_log("updateBoard - Debug WHERE clause result: " . json_encode($debugResult));
+        
+        // Debug: Check current values in database
+        $currentStmt = $pdo->prepare("SELECT name, description, manufacturer, package_type, pin_count, voltage_range, clock_speed, flash_memory, ram, image_url, link, category FROM boards WHERE slug = ?");
+        $currentStmt->execute([$identifier]);
+        $currentValues = $currentStmt->fetch();
+        error_log("updateBoard - Current database values: " . json_encode($currentValues));
+    } else {
+        // Slug is different, update it
+        $stmt = $pdo->prepare("
+            UPDATE boards 
+            SET name = ?, description = ?, manufacturer = ?, package_type = ?, pin_count = ?,
+                voltage_range = ?, clock_speed = ?, flash_memory = ?, ram = ?, image_url = ?, slug = ?, link = ?, category = ?
+            WHERE $whereClause
+        ");
+        
+        $stmt->execute([
+            $name, $description, $manufacturer, $package_type, $pin_count, 
+            $voltage_range, $clock_speed, $flash_memory, $ram, $image_url, 
+            $slug, $link, $category, $identifier
+        ]);
+    }
+    
+    error_log("updateBoard - rowCount: " . $stmt->rowCount());
+    
+    // Check if the board still exists (in case it was deleted during the update)
+    $verifyStmt = $pdo->prepare("SELECT id FROM boards WHERE $whereClause");
+    $verifyStmt->execute([$identifier]);
+    $verifyResult = $verifyStmt->fetch();
+    
+    if (!$verifyResult) {
+        error_log("updateBoard - Board not found after update with identifier: " . $identifier);
+        errorResponse('Board not found', 404);
+    }
+    
+    // If rowCount is 0, it means no changes were made (values were identical)
+    // This is still a successful update
+    if ($stmt->rowCount() === 0) {
+        error_log("updateBoard - No changes made (values identical), but board exists");
     }
     
     successResponse([

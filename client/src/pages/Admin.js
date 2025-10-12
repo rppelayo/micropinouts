@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -980,7 +980,7 @@ const WiringGuideContent = () => {
 
   const fetchPins = async (boardId, type) => {
     try {
-      const response = await fetch(`/api/admin/boards/${boardId}/pins`, {
+      const response = await fetch(`http://localhost:8080/micropinouts/api-php/admin/boards/${boardId}/pins`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         }
@@ -1112,7 +1112,7 @@ const WiringGuideContent = () => {
     if (!currentWiringGuide) return;
     
     try {
-      const response = await fetch(`/api/admin/wiring-guide/${currentWiringGuide.id}/publish`, {
+      const response = await fetch(`http://localhost:8080/micropinouts/api-php/admin/wiring-guide/${currentWiringGuide.id}/publish`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1139,7 +1139,7 @@ const WiringGuideContent = () => {
     if (!currentWiringGuide) return;
     
     try {
-      const response = await fetch(`/api/admin/wiring-guide/${currentWiringGuide.id}`, {
+      const response = await fetch(`http://localhost:8080/micropinouts/api-php/admin/wiring-guide/${currentWiringGuide.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1189,7 +1189,7 @@ const WiringGuideContent = () => {
 
   const togglePublish = async (id, currentStatus) => {
     try {
-      const response = await fetch(`/api/admin/wiring-guide/${id}/publish`, {
+      const response = await fetch(`http://localhost:8080/micropinouts/api-php/admin/wiring-guide/${id}/publish`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1217,7 +1217,7 @@ const WiringGuideContent = () => {
     if (!window.confirm('Are you sure you want to delete this wiring guide?')) return;
     
     try {
-      const response = await fetch(`/api/admin/wiring-guide/${id}`, {
+      const response = await fetch(`http://localhost:8080/micropinouts/api-php/admin/wiring-guide/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
@@ -1251,7 +1251,7 @@ const WiringGuideContent = () => {
     
     setEditLoading(true);
     try {
-      const response = await fetch(`/api/admin/wiring-guide/${editingGuide.id}`, {
+      const response = await fetch(`http://localhost:8080/micropinouts/api-php/admin/wiring-guide/${editingGuide.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -2005,6 +2005,7 @@ const WiringGuideContent = () => {
 const Admin = () => {
   console.log('🔍 Admin component loaded - debugging is working!');
   const { isAuthenticated, token, login, logout, verifyToken } = useAuth();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('boards');
   const [boards, setBoards] = useState([]);
   const [filteredBoards, setFilteredBoards] = useState([]);
@@ -2037,6 +2038,15 @@ const Admin = () => {
   const [fritzingData, setFritzingData] = useState(null);
   const [pendingModalOpen, setPendingModalOpen] = useState(false);
   const navigate = useNavigate();
+
+  // Handle URL parameters to set active tab
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const tab = urlParams.get('tab');
+    if (tab === 'wiring') {
+      setActiveTab('wiring');
+    }
+  }, [location.search]);
 
   const [loginForm, setLoginForm] = useState({
     username: '',
@@ -2156,8 +2166,10 @@ const Admin = () => {
 
   // Initial load
   useEffect(() => {
-    fetchBoards();
-  }, []);
+    if (isAuthenticated) {
+      fetchBoards();
+    }
+  }, [isAuthenticated]);
 
   // Refetch boards when switching to boards tab
   useEffect(() => {
