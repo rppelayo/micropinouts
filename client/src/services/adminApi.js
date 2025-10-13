@@ -82,6 +82,7 @@ export const adminUploadAPI = {
 
 // Admin Wiring Guide API (singular - for generating new guides)
 export const adminWiringGuideAPI = {
+  preview: (data) => adminApi.post('/admin/wiring-guide/preview', data),
   generate: (data) => adminApi.post('/admin/wiring-guide/generate', data)
 };
 

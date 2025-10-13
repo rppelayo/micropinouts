@@ -4,7 +4,6 @@ import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { GitCompare, Check } from 'lucide-react';
 import { boardsAPI } from '../services/api';
-import SVGThumbnail from '../components/SVGThumbnail';
 
 const HomeContainer = styled.div`
   padding: 40px 0;
@@ -471,49 +470,6 @@ const ErrorMessage = styled.div`
   margin: 40px 0;
 `;
 
-const FeaturesSection = styled.section`
-  margin-top: 100px;
-  text-align: center;
-`;
-
-const SectionTitle = styled.h2`
-  font-size: 36px;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 60px;
-`;
-
-const FeaturesGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 32px;
-  margin-top: 40px;
-`;
-
-const FeatureCard = styled.div`
-  background: white;
-  border-radius: 12px;
-  padding: 32px 24px;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-  border: 1px solid #e2e8f0;
-`;
-
-const FeatureIcon = styled.div`
-  font-size: 48px;
-  margin-bottom: 20px;
-`;
-
-const FeatureTitle = styled.h3`
-  font-size: 20px;
-  font-weight: 600;
-  color: #1e293b;
-  margin-bottom: 12px;
-`;
-
-const FeatureDescription = styled.p`
-  color: #64748b;
-  line-height: 1.6;
-`;
 
 const PaginationContainer = styled.div`
   display: flex;
@@ -610,6 +566,7 @@ const Home = () => {
       
       // Handle both array and paginated response formats
       const boardsData = Array.isArray(data) ? data : (data.pinouts || []);
+      
       
       setBoards(boardsData);
       setTotalBoards(boardsData.length);
@@ -813,10 +770,6 @@ const Home = () => {
                 
                 <CardHeader>
                   <CardTitle>
-                    <SVGThumbnail 
-                      svgContent={board.svg_content} 
-                      boardName={board.name}
-                    />
                     {board.name}
                   </CardTitle>
                   <CardBadge>{board.package_type}</CardBadge>
@@ -906,46 +859,6 @@ const Home = () => {
           </PaginationContainer>
         )}
 
-        <FeaturesSection>
-          <SectionTitle>Features</SectionTitle>
-          <FeaturesGrid>
-            <FeatureCard>
-              <FeatureIcon>🎯</FeatureIcon>
-              <FeatureTitle>Interactive Pinouts</FeatureTitle>
-              <FeatureDescription>
-                Click on any pin to view detailed information including functions, 
-                voltage ranges, and alternate uses.
-              </FeatureDescription>
-            </FeatureCard>
-            
-            <FeatureCard>
-              <FeatureIcon>🔍</FeatureIcon>
-              <FeatureTitle>Pin Filtering</FeatureTitle>
-              <FeatureDescription>
-                Filter pins by groups like power, communication, analog, 
-                and PWM to focus on what you need.
-              </FeatureDescription>
-            </FeatureCard>
-            
-            <FeatureCard>
-              <FeatureIcon>📱</FeatureIcon>
-              <FeatureTitle>Responsive Design</FeatureTitle>
-              <FeatureDescription>
-                Works perfectly on desktop, tablet, and mobile devices 
-                with touch-friendly interactions.
-              </FeatureDescription>
-            </FeatureCard>
-            
-            <FeatureCard>
-              <FeatureIcon>⚡</FeatureIcon>
-              <FeatureTitle>Fast & Modern</FeatureTitle>
-              <FeatureDescription>
-                Built with modern web technologies for fast loading 
-                and smooth user experience.
-              </FeatureDescription>
-            </FeatureCard>
-          </FeaturesGrid>
-        </FeaturesSection>
       </div>
 
       {/* Comparison Bar */}

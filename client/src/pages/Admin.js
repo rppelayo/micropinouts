@@ -1035,7 +1035,38 @@ const WiringGuideContent = () => {
     setConnections(updated);
   };
 
-  const generateWiringGuide = async () => {
+  const generatePreview = async () => {
+    if (!selectedSensor || !selectedMicrocontroller || connections.length === 0) {
+      alert('Please select both boards and add at least one connection');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { adminWiringGuideAPI } = await import('../services/adminApi');
+      const response = await adminWiringGuideAPI.preview({
+        sensorBoardId: selectedSensor,
+        microcontrollerBoardId: selectedMicrocontroller,
+        connections: connections,
+      });
+
+      const result = response.data;
+      setGeneratedSVG(result.data.svgContent);
+      setCurrentWiringGuide(null); // No database record yet
+      setShowPreview(true);
+      // Reset pan/zoom when new SVG is generated
+      setZoomLevel(1);
+      setPanX(0);
+      setPanY(0);
+    } catch (error) {
+      console.error('Error generating preview:', error);
+      alert('Failed to generate preview');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveAsDraft = async () => {
     if (!selectedSensor || !selectedMicrocontroller || connections.length === 0) {
       alert('Please select both boards and add at least one connection');
       return;
@@ -1052,24 +1083,97 @@ const WiringGuideContent = () => {
       });
 
       const result = response.data;
-      // Handle the generated wiring guide
-      console.log('Wiring guide generated:', result);
-      setGeneratedSVG(result.data.svgContent);
       setCurrentWiringGuide({
         id: result.data.wiringGuideId,
         published: false,
         slug: result.data.slug,
         description: description
       });
-      setShowPreview(true);
-      // Reset pan/zoom when new SVG is generated
-      setZoomLevel(1);
-      setPanX(0);
-      setPanY(0);
-      alert('Wiring guide generated successfully!');
+      alert('Wiring guide saved as draft successfully!');
+      // Refresh the wiring guides list
+      fetchWiringGuides();
     } catch (error) {
-      console.error('Failed to generate wiring guide:', error);
-      alert('Failed to generate wiring guide');
+      console.error('Error saving draft:', error);
+      alert('Failed to save as draft');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const publishWiringGuide = async () => {
+    if (!selectedSensor || !selectedMicrocontroller || connections.length === 0) {
+      alert('Please select both boards and add at least one connection');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { adminWiringGuideAPI } = await import('../services/adminApi');
+      const response = await adminWiringGuideAPI.generate({
+        sensorBoardId: selectedSensor,
+        microcontrollerBoardId: selectedMicrocontroller,
+        connections: connections,
+        description: description,
+      });
+
+      const result = response.data;
+      setCurrentWiringGuide({
+        id: result.data.wiringGuideId,
+        published: true,
+        slug: result.data.slug,
+        description: description
+      });
+      
+      // Publish the guide
+      const publishResponse = await fetch(`http://localhost:8080/micropinouts/api-php/admin/wiring-guide/${result.data.wiringGuideId}/publish`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        },
+        body: JSON.stringify({ published: true })
+      });
+
+      if (publishResponse.ok) {
+        alert('Wiring guide published successfully!');
+        // Refresh the wiring guides list
+        fetchWiringGuides();
+      } else {
+        alert('Failed to publish wiring guide');
+      }
+    } catch (error) {
+      console.error('Error publishing wiring guide:', error);
+      alert('Failed to publish wiring guide');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const togglePublishStatus = async (publish) => {
+    if (!currentWiringGuide) return;
+
+    setLoading(true);
+    try {
+      const response = await fetch(`http://localhost:8080/micropinouts/api-php/admin/wiring-guide/${currentWiringGuide.id}/publish`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        },
+        body: JSON.stringify({ published: publish })
+      });
+
+      if (response.ok) {
+        setCurrentWiringGuide(prev => ({ ...prev, published: publish }));
+        alert(publish ? 'Wiring guide published successfully!' : 'Wiring guide unpublished successfully!');
+        // Refresh the wiring guides list
+        fetchWiringGuides();
+      } else {
+        alert(`Failed to ${publish ? 'publish' : 'unpublish'} wiring guide`);
+      }
+    } catch (error) {
+      console.error(`Error ${publish ? 'publishing' : 'unpublishing'} wiring guide:`, error);
+      alert(`Failed to ${publish ? 'publish' : 'unpublish'} wiring guide`);
     } finally {
       setLoading(false);
     }
@@ -1108,62 +1212,6 @@ const WiringGuideContent = () => {
     zoomWiringGuide(delta);
   };
 
-  const publishWiringGuide = async (publish) => {
-    if (!currentWiringGuide) return;
-    
-    try {
-      const response = await fetch(`http://localhost:8080/micropinouts/api-php/admin/wiring-guide/${currentWiringGuide.id}/publish`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-        },
-        body: JSON.stringify({ published: publish })
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setCurrentWiringGuide(prev => ({ ...prev, published: publish }));
-        alert(result.message);
-      } else {
-        const error = await response.json();
-        alert('Failed to update wiring guide: ' + error.error);
-      }
-    } catch (error) {
-      console.error('Failed to update wiring guide:', error);
-      alert('Failed to update wiring guide');
-    }
-  };
-
-  const saveAsDraft = async () => {
-    if (!currentWiringGuide) return;
-    
-    try {
-      const response = await fetch(`http://localhost:8080/micropinouts/api-php/admin/wiring-guide/${currentWiringGuide.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-        },
-        body: JSON.stringify({ 
-          description: description,
-          published: false 
-        })
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setCurrentWiringGuide(prev => ({ ...prev, published: false, description: description }));
-        alert('Wiring guide saved as draft');
-      } else {
-        const error = await response.json();
-        alert('Failed to save wiring guide: ' + error.error);
-      }
-    } catch (error) {
-      console.error('Failed to save wiring guide:', error);
-      alert('Failed to save wiring guide');
-    }
-  };
 
   // Management functions
   const fetchWiringGuides = async () => {
@@ -1236,9 +1284,30 @@ const WiringGuideContent = () => {
     }
   };
 
-  const openEditModal = (guide) => {
+  const openEditModal = async (guide) => {
     setEditingGuide(guide);
     setEditDescription(guide.description || '');
+    
+    // Fetch board names if not already present
+    if (!guide.sensor_name || !guide.microcontroller_name) {
+      try {
+        const sensorResponse = await fetch(`http://localhost:8080/micropinouts/api-php/boards/${guide.sensor_board_id}`);
+        const microResponse = await fetch(`http://localhost:8080/micropinouts/api-php/boards/${guide.microcontroller_board_id}`);
+        
+        if (sensorResponse.ok && microResponse.ok) {
+          const sensorData = await sensorResponse.json();
+          const microData = await microResponse.json();
+          
+          setEditingGuide({
+            ...guide,
+            sensor_name: sensorData.name,
+            microcontroller_name: microData.name
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching board names:', error);
+      }
+    }
   };
 
   const closeEditModal = () => {
@@ -1463,8 +1532,8 @@ const WiringGuideContent = () => {
               </div>
               
               <div style={{ display: 'flex', gap: '12px' }}>
-                <GenerateButton onClick={generateWiringGuide} disabled={loading}>
-                  {loading ? 'Generating...' : 'Generate'}
+                <GenerateButton onClick={generatePreview} disabled={loading}>
+                  {loading ? 'Generating...' : 'Generate Preview'}
                 </GenerateButton>
               </div>
             </WiringStep>
@@ -1502,10 +1571,15 @@ const WiringGuideContent = () => {
                   id="wiring-guide-svg-container"
                   style={{ 
                     width: '100%', 
-                    height: '700px',
+                    minHeight: '400px',
+                    maxHeight: '600px',
+                    height: 'auto',
                     position: 'relative',
                     overflow: 'hidden',
-                    cursor: isDragging ? 'grabbing' : 'grab'
+                    cursor: isDragging ? 'grabbing' : 'grab',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
@@ -1614,9 +1688,45 @@ const WiringGuideContent = () => {
                 </div>
               </div>
               <div style={{ marginTop: '16px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                {/* Show Save as Draft and Publish buttons when there's only a preview (no currentWiringGuide) */}
+                {!currentWiringGuide && (
+                  <>
+                    <button 
+                      onClick={saveAsDraft}
+                      disabled={loading}
+                      style={{
+                        padding: '8px 16px',
+                        background: '#6b7280',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: loading ? 'not-allowed' : 'pointer',
+                        opacity: loading ? 0.6 : 1
+                      }}
+                    >
+                      💾 Save as Draft
+                    </button>
+                    <button 
+                      onClick={publishWiringGuide}
+                      disabled={loading}
+                      style={{
+                        padding: '8px 16px',
+                        background: '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: loading ? 'not-allowed' : 'pointer',
+                        opacity: loading ? 0.6 : 1
+                      }}
+                    >
+                      📢 Publish
+                    </button>
+                  </>
+                )}
+                {/* Show existing buttons when there's a currentWiringGuide */}
                 {currentWiringGuide && !currentWiringGuide.published && (
                   <button 
-                    onClick={() => publishWiringGuide(true)}
+                    onClick={() => togglePublishStatus(true)}
                     style={{
                       padding: '8px 16px',
                       background: '#10b981',
@@ -1646,7 +1756,7 @@ const WiringGuideContent = () => {
                 )}
                 {currentWiringGuide && currentWiringGuide.published && (
                   <button 
-                    onClick={() => publishWiringGuide(false)}
+                    onClick={() => togglePublishStatus(false)}
                     style={{
                       padding: '8px 16px',
                       background: '#f59e0b',
@@ -1661,7 +1771,7 @@ const WiringGuideContent = () => {
                 )}
                 {currentWiringGuide && currentWiringGuide.published && (
                   <button 
-                    onClick={() => window.open(`/wiring-guide/${currentWiringGuide.slug}`, '_blank')}
+                    onClick={() => window.open(`/micropinouts/wiring-guide/${currentWiringGuide.slug}`, '_blank')}
                     style={{
                       padding: '8px 16px',
                       background: '#3b82f6',
@@ -1749,6 +1859,16 @@ const WiringGuideContent = () => {
                         {guide.sensor_name} → {guide.microcontroller_name}
                       </h3>
                       <span style={{
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        background: '#6b7280',
+                        color: 'white'
+                      }}>
+                        ID: {guide.id}
+                      </span>
+                      <span style={{
                         padding: '2px 8px',
                         borderRadius: '4px',
                         fontSize: '12px',
@@ -1808,9 +1928,9 @@ const WiringGuideContent = () => {
                       {guide.published ? 'Unpublish' : 'Publish'}
                     </button>
                     
-                    {guide.published && (
+                    {!!guide.published && (
                       <button
-                        onClick={() => window.open(`/wiring-guide/${guide.slug}`, '_blank')}
+                        onClick={() => window.open(`/micropinouts/wiring-guide/${guide.slug}`, '_blank')}
                         style={{
                           padding: '6px 12px',
                           background: '#3b82f6',
@@ -1867,7 +1987,8 @@ const WiringGuideContent = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000
+          zIndex: 9999,
+          padding: '20px'
         }}>
           <div style={{
             background: 'white',
@@ -1876,7 +1997,7 @@ const WiringGuideContent = () => {
             width: '500px',
             maxWidth: '90vw',
             maxHeight: '90vh',
-            overflow: 'auto'
+            overflow: 'auto',
           }}>
             <div style={{
               display: 'flex',
@@ -1917,7 +2038,7 @@ const WiringGuideContent = () => {
                 color: '#6b7280',
                 fontSize: '14px'
               }}>
-                {editingGuide.sensor_name} → {editingGuide.microcontroller_name}
+                {editingGuide.sensor_name || `Sensor Board ID: ${editingGuide.sensor_board_id}`} → {editingGuide.microcontroller_name || `Microcontroller Board ID: ${editingGuide.microcontroller_board_id}`}
               </div>
             </div>
 

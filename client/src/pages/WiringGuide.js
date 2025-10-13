@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import styled from 'styled-components';
 
@@ -124,11 +124,33 @@ const PinArrow = styled.span`
 const SVGContainer = styled.div`
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  padding: 20px;
   background: white;
+  display: flex;
+  flex-direction: column;
+  min-height: 400px;
+  max-height: 600px;
+`;
+
+const SVGHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 8px 8px 0 0;
+  min-height: 60px;
+  flex-shrink: 0;
+`;
+
+const SVGContent = styled.div`
+  flex: 1;
   position: relative;
   overflow: hidden;
-  height: 600px;
+  border-radius: 0 0 8px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 const SVGWrapper = styled.div`
@@ -139,8 +161,8 @@ const SVGWrapper = styled.div`
   cursor: ${props => props.isDragging ? 'grabbing' : 'grab'};
 `;
 
-const SVGContent = styled.div`
-  transform: ${props => `translate(${props.panX}px, ${props.panY}px) scale(${props.zoomLevel})`};
+const SVGInner = styled.div`
+  transform: ${props => `translate(${props.panX + props.offsetX}px, ${props.panY + props.offsetY}px) scale(${props.zoomLevel})`};
   transform-origin: center center;
   width: 100%;
   height: 100%;
@@ -150,13 +172,9 @@ const SVGContent = styled.div`
 `;
 
 const Controls = styled.div`
-  position: absolute;
-  top: 20px;
-  right: 20px;
   display: flex;
-  flex-direction: column;
   gap: 8px;
-  z-index: 10;
+  align-items: center;
 `;
 
 const ControlButton = styled.button`
@@ -219,6 +237,7 @@ const WiringGuide = () => {
   const [wiringGuide, setWiringGuide] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const containerRef = useRef(null);
   
   // Pan/Zoom state
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -226,12 +245,36 @@ const WiringGuide = () => {
   const [panY, setPanY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [svgOffset, setSvgOffset] = useState({ x: 0, y: 0 });
 
-  useEffect(() => {
-    fetchWiringGuide();
-  }, [slug]);
+  // Pan/Zoom functions
+  const zoomWiringGuide = useCallback((factor) => {
+    setZoomLevel(prev => Math.max(0.1, Math.min(5, prev * factor)));
+  }, []);
 
-  const fetchWiringGuide = async () => {
+  const calculateSVGCenter = useCallback((svgContent) => {
+    if (!svgContent || !containerRef.current) return { x: 0, y: 0 };
+    
+    // Parse SVG dimensions from the content
+    const svgMatch = svgContent.match(/<svg[^>]*width="([^"]*)"[^>]*height="([^"]*)"[^>]*>/);
+    if (!svgMatch) return { x: 0, y: 0 };
+    
+    const svgWidth = parseFloat(svgMatch[1]);
+    const svgHeight = parseFloat(svgMatch[2]);
+    
+    // Get container dimensions
+    const container = containerRef.current;
+    const containerWidth = container.offsetWidth;
+    const containerHeight = container.offsetHeight;
+    
+    // Calculate offset to center the SVG
+    const offsetX = (containerWidth - svgWidth) / 2;
+    const offsetY = (containerHeight - svgHeight) / 2;
+    
+    return { x: offsetX, y: offsetY };
+  }, []);
+
+  const fetchWiringGuide = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`http://localhost:8080/micropinouts/api-php/wiring-guide/${slug}`);
@@ -240,6 +283,12 @@ const WiringGuide = () => {
         const data = await response.json();
         setWiringGuide(data);
         setError(null);
+        
+        // Calculate SVG centering offset after a short delay to ensure container is rendered
+        setTimeout(() => {
+          const offset = calculateSVGCenter(data.svg_content);
+          setSvgOffset(offset);
+        }, 100);
       } else {
         setError('Wiring guide not found');
       }
@@ -249,18 +298,40 @@ const WiringGuide = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [slug, calculateSVGCenter]);
 
-  // Pan/Zoom functions
-  const zoomWiringGuide = (factor) => {
-    setZoomLevel(prev => Math.max(0.1, Math.min(5, prev * factor)));
-  };
+  useEffect(() => {
+    fetchWiringGuide();
+  }, [fetchWiringGuide]);
 
-  const resetWiringGuideZoom = () => {
+  // Add wheel event listener with passive: false
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? 0.9 : 1.1;
+      zoomWiringGuide(delta);
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, [zoomWiringGuide]);
+
+  const resetWiringGuideZoom = useCallback(() => {
     setZoomLevel(1);
     setPanX(0);
     setPanY(0);
-  };
+    // Recalculate centering offset
+    if (wiringGuide?.svg_content) {
+      const offset = calculateSVGCenter(wiringGuide.svg_content);
+      setSvgOffset(offset);
+    }
+  }, [wiringGuide, calculateSVGCenter]);
 
   const handleMouseDown = (e) => {
     setIsDragging(true);
@@ -278,11 +349,6 @@ const WiringGuide = () => {
     setIsDragging(false);
   };
 
-  const handleWheel = (e) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    zoomWiringGuide(delta);
-  };
 
   if (loading) {
     return (
@@ -347,45 +413,52 @@ const WiringGuide = () => {
       </PinConnections>
 
       <SVGContainer>
-        <SVGWrapper
-          isDragging={isDragging}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onWheel={handleWheel}
-        >
-          <SVGContent
-            panX={panX}
-            panY={panY}
-            zoomLevel={zoomLevel}
-            dangerouslySetInnerHTML={{ __html: wiringGuide.svg_content }}
-          />
-        </SVGWrapper>
-        
-        <Controls>
+        <SVGHeader>
           <ZoomIndicator>
             {Math.round(zoomLevel * 100)}%
           </ZoomIndicator>
-          <ControlButton
-            onClick={() => zoomWiringGuide(1.2)}
-            title="Zoom In"
+          
+          <Controls>
+            <ControlButton
+              onClick={() => zoomWiringGuide(1.2)}
+              title="Zoom In"
+            >
+              +
+            </ControlButton>
+            <ControlButton
+              onClick={() => zoomWiringGuide(0.8)}
+              title="Zoom Out"
+            >
+              −
+            </ControlButton>
+            <ControlButton
+              onClick={resetWiringGuideZoom}
+              title="Reset Zoom"
+            >
+              ⌂
+            </ControlButton>
+          </Controls>
+        </SVGHeader>
+        
+        <SVGContent>
+          <SVGWrapper
+            ref={containerRef}
+            isDragging={isDragging}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
           >
-            +
-          </ControlButton>
-          <ControlButton
-            onClick={() => zoomWiringGuide(0.8)}
-            title="Zoom Out"
-          >
-            −
-          </ControlButton>
-          <ControlButton
-            onClick={resetWiringGuideZoom}
-            title="Reset Zoom"
-          >
-            ⌂
-          </ControlButton>
-        </Controls>
+            <SVGInner
+              panX={panX}
+              panY={panY}
+              zoomLevel={zoomLevel}
+              offsetX={svgOffset.x}
+              offsetY={svgOffset.y}
+              dangerouslySetInnerHTML={{ __html: wiringGuide.svg_content }}
+            />
+          </SVGWrapper>
+        </SVGContent>
       </SVGContainer>
     </WiringGuideContainer>
   );
