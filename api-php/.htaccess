@@ -7,7 +7,7 @@ RewriteRule ^(.*)$ $1 [R=200,L]
 # Route API requests to index.php (but allow direct file access)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_URI} !^/micropinouts/api-php/(setup|test|db-test|debug|test-fritzing-parser|test-zip)\.php$
+RewriteCond %{REQUEST_URI} !^/micropinouts/api-php/(setup|test|db-test|debug|test-fritzing-parser|test-zip|upload-from-fetcher)\.php$
 RewriteCond %{REQUEST_URI} !^/micropinouts/api-php/upload-test\.html$
 RewriteCond %{REQUEST_URI} !^/micropinouts/api-php/test-upload-response\.php$
 RewriteCond %{REQUEST_URI} !^/micropinouts/api-php/debug-fzp\.php$
@@ -77,6 +77,11 @@ Options -Indexes
 </Files>
 
 <Files "debug-fzp.php">
+    Order Allow,Deny
+    Allow from all
+</Files>
+
+<Files "upload-from-fetcher.php">
     Order Allow,Deny
     Allow from all
 </Files>

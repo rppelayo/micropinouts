@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Cpu, Home, Settings, LogOut, GitCompare, Link as LinkIcon } from 'lucide-react';
+import { Home, Settings, LogOut, GitCompare, Link as LinkIcon } from 'lucide-react';
 import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -37,6 +37,11 @@ const Logo = styled(Link)`
   &:hover {
     color: #3b82f6;
   }
+`;
+
+const LogoImage = styled.img`
+  height: 70px;
+  width: auto;
 `;
 
 const Nav = styled.nav`
@@ -109,8 +114,7 @@ const Header = () => {
     <HeaderContainer>
       <HeaderContent>
         <Logo to="/">
-          <Cpu size={32} />
-          MicroPinouts
+          <LogoImage src="/micropinouts/logo.png" alt="MicroPinouts Logo" />
         </Logo>
         <Nav>
           <NavLink to="/" $active={location.pathname === '/'}>

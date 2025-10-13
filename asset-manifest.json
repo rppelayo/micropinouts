@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/micropinouts/static/css/main.be2aa0f5.css",
+    "main.js": "/micropinouts/static/js/main.eb622b94.js",
+    "static/js/496.93fa5a48.chunk.js": "/micropinouts/static/js/496.93fa5a48.chunk.js",
+    "index.html": "/micropinouts/index.html",
+    "main.be2aa0f5.css.map": "/micropinouts/static/css/main.be2aa0f5.css.map",
+    "main.eb622b94.js.map": "/micropinouts/static/js/main.eb622b94.js.map",
+    "496.93fa5a48.chunk.js.map": "/micropinouts/static/js/496.93fa5a48.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.be2aa0f5.css",
+    "static/js/main.eb622b94.js"
+  ]
+}

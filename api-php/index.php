@@ -63,6 +63,10 @@ require_once 'pin-groups.php';
 require_once 'wiring-guides.php';
 } elseif ($pathParts[0] === 'wiring-guide') {
 require_once 'wiring-guides.php';
+} elseif ($pathParts[0] === 'upload-from-fetcher.php') {
+    require_once 'upload-from-fetcher.php';
+} elseif ($pathParts[0] === 'test-routing.php') {
+    require_once 'test-routing.php';
 } elseif ($pathParts[0] === 'admin') {
     // Admin routes
     error_log("Admin routing - Path parts: " . print_r($pathParts, true));

@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Save, Plus, Trash2, Edit3, X, Move, Eye, EyeOff } from 'lucide-react';
 import SVGViewer from '../components/SVGViewer';
+import RichTextEditor from '../components/RichTextEditor';
 import { boardsAPI, pinGroupsAPI } from '../services/api';
 
 const EditBoardContainer = styled.div`
@@ -733,6 +734,7 @@ const EditBoard = () => {
           description: board.description,
           manufacturer: board.manufacturer,
           package_type: board.package_type,
+          pin_count: board.pin_count,
           voltage_range: board.voltage_range,
           clock_speed: board.clock_speed,
           flash_memory: board.flash_memory,
@@ -909,6 +911,21 @@ const EditBoard = () => {
           </BoardInfoField>
 
           <BoardInfoField>
+            <BoardInfoLabel>Number of Pins</BoardInfoLabel>
+            {editingBoard ? (
+              <BoardInfoInput
+                type="number"
+                min="1"
+                value={board.pin_count || ''}
+                onChange={(e) => handleBoardUpdate('pin_count', parseInt(e.target.value) || 0)}
+                placeholder="Enter number of pins"
+              />
+            ) : (
+              <BoardInfoDisplay>{board.pin_count || 'Not specified'}</BoardInfoDisplay>
+            )}
+          </BoardInfoField>
+
+          <BoardInfoField>
             <BoardInfoLabel>Category</BoardInfoLabel>
             {editingBoard ? (
               <BoardInfoSelect
@@ -1012,14 +1029,14 @@ const EditBoard = () => {
           <BoardInfoField style={{ gridColumn: '1 / -1' }}>
             <BoardInfoLabel>Description</BoardInfoLabel>
             {editingBoard ? (
-              <BoardInfoTextArea
+              <RichTextEditor
                 value={board.description || ''}
-                onChange={(e) => handleBoardUpdate('description', e.target.value)}
-                placeholder="Enter board description"
-                rows={4}
+                onChange={(value) => handleBoardUpdate('description', value)}
+                placeholder="Enter board description with formatting..."
+                height={150}
               />
             ) : (
-              <BoardInfoDisplay>{board.description || 'No description available'}</BoardInfoDisplay>
+              <BoardInfoDisplay dangerouslySetInnerHTML={{ __html: board.description || 'No description available' }} />
             )}
           </BoardInfoField>
         </BoardInfoGrid>
@@ -1199,10 +1216,11 @@ const EditBoard = () => {
 
                     <FormGroup style={{ gridColumn: '1 / -1' }}>
                       <Label>Description</Label>
-                      <TextArea
+                      <RichTextEditor
                         value={pin.description || ''}
-                        onChange={(e) => handlePinUpdate(pin.id, 'description', e.target.value)}
-                        placeholder="Additional pin information..."
+                        onChange={(value) => handlePinUpdate(pin.id, 'description', value)}
+                        placeholder="Additional pin information with formatting..."
+                        height={100}
                       />
                     </FormGroup>
 

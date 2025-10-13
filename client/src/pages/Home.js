@@ -526,6 +526,24 @@ const Home = () => {
   // Cache state
   const [boardsCache, setBoardsCache] = useState(new Map());
   const [lastFetchTime, setLastFetchTime] = useState(0);
+
+  // Helper function to strip HTML tags and truncate text
+  const stripHtmlAndTruncate = (html, maxLength = 150) => {
+    if (!html) return '';
+    
+    // Create a temporary div to parse HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    
+    // Get text content and strip extra whitespace
+    const textContent = tempDiv.textContent || tempDiv.innerText || '';
+    const cleanText = textContent.replace(/\s+/g, ' ').trim();
+    
+    // Truncate if needed
+    return cleanText.length > maxLength 
+      ? `${cleanText.substring(0, maxLength)}...` 
+      : cleanText;
+  };
   
   // Comparison state
   const [selectedBoards, setSelectedBoards] = useState(new Set());
@@ -647,8 +665,12 @@ const Home = () => {
     const newSelection = new Set(selectedBoards);
     if (newSelection.has(boardId)) {
       newSelection.delete(boardId);
-    } else if (newSelection.size < 4) { // Limit to 4 boards
+    } else if (newSelection.size < 2) { // Limit to 2 boards for comparison
       newSelection.add(boardId);
+    } else {
+      // Show feedback when trying to select more than 2 boards
+      alert('You can only compare up to 2 boards at a time. Please deselect a board first.');
+      return;
     }
     setSelectedBoards(newSelection);
   };
@@ -777,10 +799,7 @@ const Home = () => {
                 
                 {board.description && (
                   <CardDescription>
-                    {board.description.length > 150 
-                      ? `${board.description.substring(0, 150)}...` 
-                      : board.description
-                    }
+                    {stripHtmlAndTruncate(board.description, 150)}
                   </CardDescription>
                 )}
                 
@@ -865,14 +884,14 @@ const Home = () => {
       {selectedBoards.size > 0 && (
         <ComparisonBar>
           <ComparisonCount>
-            {selectedBoards.size} board{selectedBoards.size !== 1 ? 's' : ''} selected
+            {selectedBoards.size} of 2 boards selected for comparison
           </ComparisonCount>
           <CompareButton 
             onClick={handleCompare}
             disabled={selectedBoards.size < 2}
           >
             <GitCompare size={16} />
-            Compare
+            Compare ({selectedBoards.size}/2)
           </CompareButton>
           <ClearSelectionButton onClick={clearSelection}>
             Clear

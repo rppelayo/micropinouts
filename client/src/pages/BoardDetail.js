@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Filter, Info, Zap, Wifi, Cpu, Edit3, GitCompare } from 'lucide-react';
+import { ArrowLeft, Filter, Info, Zap, Wifi, Cpu, Edit3, GitCompare, Code, Copy, Check } from 'lucide-react';
 import { boardsAPI, pinGroupsAPI } from '../services/api';
 import SVGViewer from '../components/SVGViewer';
 import CompareModal from '../components/CompareModal';
@@ -98,10 +98,93 @@ const BoardTitle = styled.h1`
   }
 `;
 
-const BoardSubtitle = styled.p`
+const BoardSubtitle = styled.div`
   font-size: 18px;
   color: #64748b;
   margin-bottom: 24px;
+  line-height: 1.6;
+  text-align: left;
+  
+  /* Preserve rich text formatting */
+  h1, h2, h3, h4, h5, h6 {
+    margin: 16px 0 8px 0;
+    font-weight: 600;
+    color: #1e293b;
+  }
+  
+  h1 { font-size: 24px; }
+  h2 { font-size: 22px; }
+  h3 { font-size: 20px; }
+  h4 { font-size: 18px; }
+  h5 { font-size: 16px; }
+  h6 { font-size: 14px; }
+  
+  p {
+    margin: 8px 0;
+  }
+  
+  ul, ol {
+    margin: 8px 0;
+    padding-left: 24px;
+  }
+  
+  li {
+    margin: 4px 0;
+  }
+  
+  blockquote {
+    border-left: 4px solid #e2e8f0;
+    padding-left: 16px;
+    margin: 16px 0;
+    font-style: italic;
+    color: #64748b;
+  }
+  
+  code {
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+  }
+  
+  pre {
+    background: #f1f5f9;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 16px 0;
+  }
+  
+  pre code {
+    background: none;
+    padding: 0;
+  }
+  
+  a {
+    color: #3b82f6;
+    text-decoration: underline;
+  }
+  
+  a:hover {
+    color: #2563eb;
+  }
+  
+  strong {
+    font-weight: 600;
+    color: #1e293b;
+  }
+  
+  em {
+    font-style: italic;
+  }
+  
+  img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 16px 0;
+  }
 `;
 
 const BoardSpecs = styled.div`
@@ -356,7 +439,82 @@ const PinDetails = styled.div`
     font-size: 14px;
     color: #475569;
     border-left: 3px solid #3b82f6;
-    text-align: justify;
+    line-height: 1.5;
+    
+    /* Preserve rich text formatting */
+    h1, h2, h3, h4, h5, h6 {
+      margin: 12px 0 6px 0;
+      font-weight: 600;
+      color: #1e293b;
+      font-size: 16px;
+    }
+    
+    p {
+      margin: 6px 0;
+    }
+    
+    ul, ol {
+      margin: 6px 0;
+      padding-left: 20px;
+    }
+    
+    li {
+      margin: 2px 0;
+    }
+    
+    blockquote {
+      border-left: 3px solid #3b82f6;
+      padding-left: 12px;
+      margin: 12px 0;
+      font-style: italic;
+      color: #64748b;
+    }
+    
+    code {
+      background: #e2e8f0;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+    
+    pre {
+      background: #e2e8f0;
+      padding: 8px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 12px 0;
+    }
+    
+    pre code {
+      background: none;
+      padding: 0;
+    }
+    
+    a {
+      color: #3b82f6;
+      text-decoration: underline;
+    }
+    
+    a:hover {
+      color: #2563eb;
+    }
+    
+    strong {
+      font-weight: 600;
+      color: #1e293b;
+    }
+    
+    em {
+      font-style: italic;
+    }
+    
+    img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 6px;
+      margin: 12px 0;
+    }
   }
 `;
 
@@ -374,7 +532,127 @@ const ErrorMessage = styled.div`
   margin: 40px 0;
 `;
 
+const EmbedButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  font-weight: 500;
+  padding: 12px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
 
+  &:hover {
+    background: #2563eb;
+  }
+`;
+
+const EmbedModal = styled(motion.div)`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+
+const EmbedModalContent = styled(motion.div)`
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+`;
+
+const EmbedModalHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+`;
+
+const EmbedModalTitle = styled.h3`
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+`;
+
+const EmbedModalClose = styled.button`
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 4px;
+  
+  &:hover {
+    color: #374151;
+  }
+`;
+
+const EmbedCodeContainer = styled.div`
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  position: relative;
+`;
+
+const EmbedCode = styled.pre`
+  margin: 0;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  color: #374151;
+  white-space: pre-wrap;
+  word-break: break-all;
+`;
+
+const CopyButton = styled.button`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+  }
+
+  &.copied {
+    background: #10b981;
+    color: white;
+    border-color: #10b981;
+  }
+`;
+
+const EmbedPreview = styled.div`
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 16px;
+`;
 
 const BoardDetail = () => {
   const { id } = useParams();
@@ -387,6 +665,9 @@ const BoardDetail = () => {
   const [error, setError] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showCompareModal, setShowCompareModal] = useState(false);
+  const [showEmbedModal, setShowEmbedModal] = useState(false);
+  const [embedCode, setEmbedCode] = useState('');
+  const [copied, setCopied] = useState(false);
 
   const { isAuthenticated } = useAuth();
 
@@ -519,6 +800,25 @@ const BoardDetail = () => {
     return <Zap size={32} />;
   };
 
+  // Embed functions
+  const generateEmbedCode = () => {
+    const baseUrl = window.location.origin;
+    const embedUrl = `${baseUrl}/micropinouts/embed/board/${id}`;
+    const iframeCode = `<iframe src="${embedUrl}" width="800" height="600" frameborder="0" style="border: 1px solid #e2e8f0; border-radius: 8px;"></iframe>`;
+    setEmbedCode(iframeCode);
+    setShowEmbedModal(true);
+  };
+
+  const copyEmbedCode = async () => {
+    try {
+      await navigator.clipboard.writeText(embedCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy embed code:', err);
+    }
+  };
+
   if (loading) {
     return (
       <BoardDetailContainer>
@@ -554,7 +854,7 @@ const BoardDetail = () => {
             {getBoardIcon(board.name)}
             {board.name}
           </BoardTitle>
-          <BoardSubtitle>{board.description}</BoardSubtitle>
+          <BoardSubtitle dangerouslySetInnerHTML={{ __html: board.description }} />
           
           <BoardSpecs>
             <SpecItem>
@@ -648,6 +948,10 @@ const BoardDetail = () => {
                   <GitCompare size={16} />
                   Compare
                 </CompareButton>
+                <EmbedButton onClick={generateEmbedCode}>
+                  <Code size={16} />
+                  Embed This Board
+                </EmbedButton>
                 {isAdmin && (
                   <EditButton to={`/admin/boards/${id}/edit`}>
                     <Edit3 size={16} />
@@ -713,7 +1017,7 @@ const BoardDetail = () => {
                         {selectedPin.description && (
                           <div className="pin-description">
                             <strong>Description:</strong><br />
-                            {selectedPin.description}
+                            <div dangerouslySetInnerHTML={{ __html: selectedPin.description }} />
                           </div>
                         )}
                       </PinDetails>
@@ -735,6 +1039,59 @@ const BoardDetail = () => {
         onClose={() => setShowCompareModal(false)}
         currentBoard={board}
       />
+
+      <AnimatePresence>
+        {showEmbedModal && (
+          <EmbedModal
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={(e) => e.target === e.currentTarget && setShowEmbedModal(false)}
+          >
+            <EmbedModalContent
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
+              <EmbedModalHeader>
+                <EmbedModalTitle>Embed This Board</EmbedModalTitle>
+                <EmbedModalClose onClick={() => setShowEmbedModal(false)}>
+                  ×
+                </EmbedModalClose>
+              </EmbedModalHeader>
+              
+              <p style={{ marginBottom: '16px', color: '#6b7280' }}>
+                Copy the code below to embed this board's pinout diagram on your website:
+              </p>
+              
+              <EmbedCodeContainer>
+                <CopyButton 
+                  onClick={copyEmbedCode}
+                  className={copied ? 'copied' : ''}
+                >
+                  {copied ? <Check size={12} /> : <Copy size={12} />}
+                  {copied ? 'Copied!' : 'Copy'}
+                </CopyButton>
+                <EmbedCode>{embedCode}</EmbedCode>
+              </EmbedCodeContainer>
+              
+              <div style={{ marginTop: '16px' }}>
+                <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600' }}>Preview:</h4>
+                <EmbedPreview>
+                  <iframe 
+                    src={`${window.location.origin}/micropinouts/embed/board/${id}`}
+                    width="100%" 
+                    height="400" 
+                    frameBorder="0"
+                    style={{ border: 'none' }}
+                    title="Board Embed Preview"
+                  />
+                </EmbedPreview>
+              </div>
+            </EmbedModalContent>
+          </EmbedModal>
+        )}
+      </AnimatePresence>
     </BoardDetailContainer>
   );
 };

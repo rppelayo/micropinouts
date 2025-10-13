@@ -50,8 +50,11 @@ try {
             break;
             
         case 'POST':
-            if (count($pathParts) === 3 && $pathParts[0] === 'admin' && $pathParts[1] === 'wiring-guide' && $pathParts[2] === 'generate') {
-                // POST /api/admin/wiring-guide/generate - Generate new wiring guide
+            if (count($pathParts) === 3 && $pathParts[0] === 'admin' && $pathParts[1] === 'wiring-guide' && $pathParts[2] === 'preview') {
+                // POST /api/admin/wiring-guide/preview - Generate SVG preview only
+                generateSVGPreview($pdo);
+            } elseif (count($pathParts) === 3 && $pathParts[0] === 'admin' && $pathParts[1] === 'wiring-guide' && $pathParts[2] === 'generate') {
+                // POST /api/admin/wiring-guide/generate - Generate new wiring guide (saves to database)
                 generateWiringGuide($pdo);
             } else {
                 errorResponse('Endpoint not found', 404);
@@ -128,7 +131,29 @@ function getWiringGuideBySlug($pdo, $slug) {
     jsonResponse($wiringGuide);
 }
 
-// Generate new wiring guide
+// Generate SVG preview only (no database save)
+function generateSVGPreview($pdo) {
+    verifyAdminToken();
+    
+    $input = json_decode(file_get_contents('php://input'), true);
+    
+    if (!$input || !isset($input['sensorBoardId']) || !isset($input['microcontrollerBoardId']) || !isset($input['connections'])) {
+        errorResponse('Sensor board ID, microcontroller board ID, and connections are required');
+    }
+    
+    $sensorBoardId = $input['sensorBoardId'];
+    $microcontrollerBoardId = $input['microcontrollerBoardId'];
+    $connections = $input['connections'];
+    
+    // Generate SVG content only
+    $svgContent = generateWiringSVG($sensorBoardId, $microcontrollerBoardId, $connections);
+    
+    successResponse([
+        'svgContent' => $svgContent
+    ], 'SVG preview generated successfully');
+}
+
+// Generate new wiring guide (saves to database as draft)
 function generateWiringGuide($pdo) {
     verifyAdminToken();
     
@@ -143,8 +168,28 @@ function generateWiringGuide($pdo) {
     $connections = $input['connections'];
     $description = $input['description'] ?? '';
     
-    // Generate a unique slug
-    $slug = 'wiring-guide-' . uniqid();
+    // Generate a meaningful slug based on board names
+    $sensorBoard = $pdo->prepare("SELECT name, slug FROM boards WHERE id = ?");
+    $sensorBoard->execute([$sensorBoardId]);
+    $sensorData = $sensorBoard->fetch();
+    
+    $microcontrollerBoard = $pdo->prepare("SELECT name, slug FROM boards WHERE id = ?");
+    $microcontrollerBoard->execute([$microcontrollerBoardId]);
+    $microData = $microcontrollerBoard->fetch();
+    
+    $sensorSlug = $sensorData['slug'] ?: strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $sensorData['name']));
+    $microSlug = $microData['slug'] ?: strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $microData['name']));
+    
+    $slug = $sensorSlug . '-to-' . $microSlug;
+    $slug = trim($slug, '-');
+    $slug = preg_replace('/-+/', '-', $slug);
+    
+    // Check if slug already exists and make it unique if needed
+    $checkStmt = $pdo->prepare("SELECT id FROM wiring_guides WHERE slug = ?");
+    $checkStmt->execute([$slug]);
+    if ($checkStmt->fetch()) {
+        $slug = $slug . '-' . uniqid();
+    }
     
     // For now, create a simple SVG representation
     $svgContent = generateWiringSVG($sensorBoardId, $microcontrollerBoardId, $connections);
@@ -254,25 +299,23 @@ function generateWiringGuideSVG($sensorData, $microcontrollerData, $connections)
     $scaledMicrocontrollerHeight = $microcontrollerHeight * $scale;
     
     // Reduce board spacing for better wire curves
-    $boardSpacing = max(150, ($effectiveSensorWidth + $scaledMicrocontrollerWidth) * 0.2);
-    $padding = 80;
-    $sensorX = $padding;
-    $microcontrollerX = $sensorX + $effectiveSensorWidth + $boardSpacing;
-    $boardY = $padding;
+    $boardSpacing = max(40, ($effectiveSensorWidth + $scaledMicrocontrollerWidth) * 0.05);
     
-    // Calculate required canvas dimensions with extra margin
-    $requiredWidth = $effectiveSensorWidth + $scaledMicrocontrollerWidth + $boardSpacing + ($padding * 2) + 100; // Extra 100px margin
-    $requiredHeight = max($effectiveSensorHeight, $scaledMicrocontrollerHeight) + ($padding * 2) + 200; // Extra 200px for labels and legend
+    // Calculate canvas dimensions - boards will extend to edges
+    $totalWidth = $effectiveSensorWidth + $scaledMicrocontrollerWidth + $boardSpacing;
+    $totalHeight = max($effectiveSensorHeight, $scaledMicrocontrollerHeight) + 50; // Extra 50px for wire curves
     
-    $totalWidth = $requiredWidth;
-    $totalHeight = $requiredHeight;
+    // Position boards to extend to container edges
+    $sensorX = 0; // Left board starts at left edge
+    $microcontrollerX = $effectiveSensorWidth + $boardSpacing; // Right board ends at right edge
+    $boardY = 25; // Center vertically with minimal margin for wire curves
     
     // Debug logging
     error_log("Wiring Guide SVG Dimensions:");
     error_log("Sensor board: {$sensorWidth}x{$sensorHeight} -> {$effectiveSensorWidth}x{$effectiveSensorHeight}");
     error_log("Microcontroller board: {$microcontrollerWidth}x{$microcontrollerHeight} -> {$scaledMicrocontrollerWidth}x{$scaledMicrocontrollerHeight}");
-    error_log("Board spacing: {$boardSpacing}, Padding: {$padding}");
-    error_log("Sensor X: {$sensorX}, Microcontroller X: {$microcontrollerX}");
+    error_log("Board spacing: {$boardSpacing}");
+    error_log("Sensor X: {$sensorX}, Microcontroller X: {$microcontrollerX}, Board Y: {$boardY}");
     error_log("Total canvas: {$totalWidth}x{$totalHeight}");
     
     // Start building the SVG
@@ -284,7 +327,7 @@ function generateWiringGuideSVG($sensorData, $microcontrollerData, $connections)
         .wire-ground { stroke: #000000; } /* Black for GND */
         .wire-signal { stroke: #3b82f6; } /* Blue for other pins */
         .connection-label { font-family: Arial, sans-serif; font-size: 10px; text-anchor: middle; fill: #374151; font-weight: bold; }
-        .board-label { font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; text-anchor: middle; fill: #1f2937; }
+        /* .board-label { font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; text-anchor: middle; fill: #1f2937; } */
       </style>
     </defs>
     
@@ -297,11 +340,11 @@ function generateWiringGuideSVG($sensorData, $microcontrollerData, $connections)
         $sensorCenterX = $sensorX + ($effectiveSensorWidth / 2);
         
         $svg .= '<g transform="translate(' . $sensorX . ', ' . $boardY . ') scale(' . $scale . ')">' . $sensorSVGContent . '</g>';
-        $svg .= '<text x="' . $sensorCenterX . '" y="' . ($boardY - 10) . '" class="board-label">' . htmlspecialchars($sensorBoard['name']) . '</text>';
+        // $svg .= '<text x="' . $sensorCenterX . '" y="' . ($boardY - 10) . '" class="board-label">' . htmlspecialchars($sensorBoard['name']) . '</text>';
     } else {
         // Fallback rectangle
         $svg .= '<rect x="' . $sensorX . '" y="' . $boardY . '" width="' . $effectiveSensorWidth . '" height="' . $effectiveSensorHeight . '" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" rx="8"/>
-                <text x="' . ($sensorX + ($effectiveSensorWidth / 2)) . '" y="' . ($boardY + 20) . '" class="board-label">' . htmlspecialchars($sensorBoard['name']) . '</text>';
+                // <text x="' . ($sensorX + ($effectiveSensorWidth / 2)) . '" y="' . ($boardY + 20) . '" class="board-label">' . htmlspecialchars($sensorBoard['name']) . '</text>';
     }
     
     // Add microcontroller board SVG content
@@ -310,11 +353,11 @@ function generateWiringGuideSVG($sensorData, $microcontrollerData, $connections)
         $microcontrollerCenterX = $microcontrollerX + ($scaledMicrocontrollerWidth / 2);
         
         $svg .= '<g transform="translate(' . $microcontrollerX . ', ' . $boardY . ') scale(' . $scale . ')">' . $microcontrollerSVGContent . '</g>';
-        $svg .= '<text x="' . $microcontrollerCenterX . '" y="' . ($boardY - 10) . '" class="board-label">' . htmlspecialchars($microcontrollerBoard['name']) . '</text>';
+        // $svg .= '<text x="' . $microcontrollerCenterX . '" y="' . ($boardY - 10) . '" class="board-label">' . htmlspecialchars($microcontrollerBoard['name']) . '</text>';
     } else {
         // Fallback rectangle
         $svg .= '<rect x="' . $microcontrollerX . '" y="' . $boardY . '" width="' . $scaledMicrocontrollerWidth . '" height="' . $scaledMicrocontrollerHeight . '" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" rx="8"/>
-                <text x="' . ($microcontrollerX + ($scaledMicrocontrollerWidth / 2)) . '" y="' . ($boardY + 20) . '" class="board-label">' . htmlspecialchars($microcontrollerBoard['name']) . '</text>';
+                // <text x="' . ($microcontrollerX + ($scaledMicrocontrollerWidth / 2)) . '" y="' . ($boardY + 20) . '" class="board-label">' . htmlspecialchars($microcontrollerBoard['name']) . '</text>';
     }
     
     // Draw connections

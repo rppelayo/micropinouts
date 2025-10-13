@@ -933,9 +933,17 @@ const CompareBoards = () => {
                   <Info size={16} />
                   Description
                 </SectionTitle>
-                <p style={{ color: '#64748b', fontSize: '14px', lineHeight: '1.5' }}>
-                  {board.description || 'No description available'}
-                </p>
+                <div 
+                  style={{ 
+                    color: '#64748b', 
+                    fontSize: '14px', 
+                    lineHeight: '1.5',
+                    textAlign: 'left'
+                  }}
+                  dangerouslySetInnerHTML={{ 
+                    __html: board.description || 'No description available' 
+                  }}
+                />
 
                 {board.link && (
                   <LinkContainer>
@@ -1024,7 +1032,7 @@ const CompareBoards = () => {
               {selectedPin.description && (
                 <PinInfoRow>
                   <PinInfoLabel>Description</PinInfoLabel>
-                  <PinInfoValue>{selectedPin.description}</PinInfoValue>
+                  <PinInfoValue dangerouslySetInnerHTML={{ __html: selectedPin.description }} />
                 </PinInfoRow>
               )}
             </PinInfoContent>
