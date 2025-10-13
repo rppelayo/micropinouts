@@ -68,26 +68,44 @@ class SVGProcessor {
           }
         }
         
-        // Determine group based on pin name patterns
-        let groupName = 'Other';
-        let groupColor = '#64748b';
+        // Determine group based on pin name patterns (matching PHP backend logic)
+        let groupName = 'Digital'; // Default to Digital
+        let groupColor = '#4ecdc4';
         
-        // Check for power pins first (including GND) - more specific patterns first
-        if (pinName.includes('GND') || pinName.includes('V') || pinName.includes('3.3V') || pinName.includes('5V') || pinName.includes('VIN') || pinName.includes('VCC')) {
+        // Ground pins - separate group
+        if (pinName.includes('GND') || pinName.includes('GROUND')) {
+          groupName = 'Ground';
+          groupColor = '#000000';
+        }
+        // Power pins (excluding GND)
+        else if (pinName.includes('VCC') || pinName.includes('VIN') || pinName.includes('3.3V') || pinName.includes('5V')) {
           groupName = 'Power';
           groupColor = '#ff6b6b';
-        } else if (pinName.includes('SDA') || pinName.includes('SCL') || pinName.includes('I2C')) {
+        }
+        // Communication pins
+        else if (pinName.includes('SDA') || pinName.includes('SCL') || pinName.includes('MOSI') || pinName.includes('MISO') || pinName.includes('SCK') || pinName.includes('TX') || pinName.includes('RX')) {
           groupName = 'Communication';
-          groupColor = '#96ceb4';
-        } else if (pinName.includes('MOSI') || pinName.includes('MISO') || pinName.includes('SCK') || pinName.includes('SPI')) {
-          groupName = 'Communication';
-          groupColor = '#96ceb4';
-        } else if (pinName.includes('TX') || pinName.includes('RX') || pinName.includes('UART')) {
-          groupName = 'Communication';
-          groupColor = '#96ceb4';
-        } else if (pinName.includes('GPIO') || pinName.includes('D') || pinName.match(/^\d+$/) || pinName.match(/^A\d+/) || pinName.includes('PWM')) {
+          groupColor = '#0000ff';
+        }
+        // Analog pins
+        else if (pinName.match(/^A\d+$/) || pinName.includes('ANALOG')) {
+          groupName = 'Analog';
+          groupColor = '#ffd700';
+        }
+        // PWM pins
+        else if (pinName.includes('PWM')) {
+          groupName = 'PWM';
+          groupColor = '#feca57';
+        }
+        // Special pins
+        else if (pinName.includes('RESET') || pinName.includes('RST') || pinName.includes('AREF') || pinName.includes('CLK') || pinName.includes('CLOCK')) {
+          groupName = 'Special';
+          groupColor = '#800080';
+        }
+        // Default to Digital for numeric pins
+        else if (pinName.match(/^\d+$/)) {
           groupName = 'Digital';
-          groupColor = '#4ecdc4';
+          groupColor = '#00ff00';
         }
 
         return {
@@ -237,6 +255,45 @@ class SVGProcessor {
     return { pinMap, boardMetadata };
   }
 
+  // Get pin color based on pin name/type
+  getPinColor(pinName) {
+    const name = pinName.toUpperCase();
+    
+    // Ground pins - black
+    if (name === 'GND' || name.includes('GROUND')) {
+      return 'rgba(0, 0, 0, 0.4)'; // Black
+    }
+    
+    // Power pins - red
+    if (name === 'VCC' || name === '5V' || name === '3.3V' || name === '3V3' || 
+        name === 'VIN' || name === 'RAW' || name.includes('POWER')) {
+      return 'rgba(255, 0, 0, 0.4)'; // Red
+    }
+    
+    // Analog pins - yellow
+    if (name.startsWith('A') && /^A[0-9]+$/.test(name)) {
+      return 'rgba(255, 215, 0, 0.4)'; // Yellow
+    }
+    
+    // Digital pins - green
+    if (/^[0-9]+$/.test(name)) {
+      return 'rgba(0, 255, 0, 0.4)'; // Green
+    }
+    
+    // Communication pins - blue
+    if (['TX', 'RX', 'TX0', 'RX1', 'RXI', 'TXO', 'SDA', 'SCL', 'MOSI', 'MISO', 'SCK', 'CS'].includes(name)) {
+      return 'rgba(0, 0, 255, 0.4)'; // Blue
+    }
+    
+    // Special pins - purple
+    if (['RST', 'RESET', 'AREF'].includes(name)) {
+      return 'rgba(128, 0, 128, 0.4)'; // Purple
+    }
+    
+    // Default - gray
+    return 'rgba(102, 102, 102, 0.4)'; // Gray
+  }
+
   makeSVGClickable(svgContent, pins) {
     const parser = new DOMParser();
     const serializer = new XMLSerializer();
@@ -250,14 +307,13 @@ class SVGProcessor {
       .pin-hole {
         cursor: pointer;
         stroke-width: 1;
-        fill: rgba(255, 0, 0, 0.3);
         transition: all 0.2s ease;
         pointer-events: all !important;
         z-index: 1000 !important;
       }
       .pin-hole:hover {
         stroke-width: 2 !important;
-        fill: rgba(255, 0, 0, 0.6) !important;
+        opacity: 0.8 !important;
       }
       .pin-hole.selected {
         stroke-width: 3 !important;
@@ -267,13 +323,14 @@ class SVGProcessor {
         display: none;
       }
       /* Group-specific colors */
-      .pin-hole.group-digital { stroke: #4ecdc4; }
+      .pin-hole.group-ground { stroke: #000000; }
       .pin-hole.group-power { stroke: #ff6b6b; }
-      .pin-hole.group-communication { stroke: #96ceb4; }
-      .pin-hole.group-analog { stroke: #45b7d1; }
+      .pin-hole.group-communication { stroke: #0000ff; }
+      .pin-hole.group-analog { stroke: #ffd700; }
+      .pin-hole.group-digital { stroke: #00ff00; }
       .pin-hole.group-pwm { stroke: #feca57; }
-      .pin-hole.group-special { stroke: #ff9ff3; }
-      .pin-hole.group-other { stroke: #64748b; }
+      .pin-hole.group-special { stroke: #800080; }
+      .pin-hole.group-other { stroke: #666666; }
     `;
     
     // Insert styles after opening svg tag
@@ -296,8 +353,9 @@ class SVGProcessor {
         elem.setAttribute('data-group', pin.group_name);
         elem.setAttribute('data-group-color', pin.group_color);
         
-        // Override the fill to ensure visibility
-        elem.setAttribute('fill', 'rgba(255, 0, 0, 0.3)');
+        // Set pin-specific color based on pin name
+        const pinColor = this.getPinColor(pin.pin_name);
+        elem.setAttribute('fill', pinColor);
         elem.setAttribute('stroke', pin.group_color);
         elem.setAttribute('stroke-width', '1');
         

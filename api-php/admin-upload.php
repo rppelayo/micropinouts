@@ -656,6 +656,88 @@ function extractPathCenter($pathData) {
     ];
 }
 
+/**
+ * Get pin color based on pin name/type
+ */
+function getPinColor($pinName) {
+    $name = strtoupper($pinName);
+    
+    // Ground pins - black
+    if ($name === 'GND' || strpos($name, 'GROUND') !== false) {
+        return 'rgba(0, 0, 0, 0.4)'; // Black
+    }
+    
+    // Power pins - red
+    if ($name === 'VCC' || $name === '5V' || $name === '3.3V' || $name === '3V3' || 
+        $name === 'VIN' || $name === 'RAW' || strpos($name, 'POWER') !== false) {
+        return 'rgba(255, 0, 0, 0.4)'; // Red
+    }
+    
+    // Analog pins - yellow
+    if (preg_match('/^A\d+$/', $name)) {
+        return 'rgba(255, 215, 0, 0.4)'; // Yellow
+    }
+    
+    // Digital pins - green
+    if (preg_match('/^\d+$/', $name)) {
+        return 'rgba(0, 255, 0, 0.4)'; // Green
+    }
+    
+    // Communication pins - blue
+    if (in_array($name, ['TX', 'RX', 'TX0', 'RX1', 'RXI', 'TXO', 'SDA', 'SCL', 'MOSI', 'MISO', 'SCK', 'CS'])) {
+        return 'rgba(0, 0, 255, 0.4)'; // Blue
+    }
+    
+    // Special pins - purple
+    if (in_array($name, ['RST', 'RESET', 'AREF'])) {
+        return 'rgba(128, 0, 128, 0.4)'; // Purple
+    }
+    
+    // Default - gray
+    return 'rgba(102, 102, 102, 0.4)'; // Gray
+}
+
+/**
+ * Get pin stroke color based on pin name/type
+ */
+function getPinStrokeColor($pinName) {
+    $name = strtoupper($pinName);
+    
+    // Ground pins - black stroke
+    if ($name === 'GND' || strpos($name, 'GROUND') !== false) {
+        return '#000000'; // Black
+    }
+    
+    // Power pins - red stroke
+    if ($name === 'VCC' || $name === '5V' || $name === '3.3V' || $name === '3V3' || 
+        $name === 'VIN' || $name === 'RAW' || strpos($name, 'POWER') !== false) {
+        return '#ff6b6b'; // Red
+    }
+    
+    // Analog pins - yellow stroke
+    if (preg_match('/^A\d+$/', $name)) {
+        return '#ffd700'; // Yellow
+    }
+    
+    // Digital pins - green stroke
+    if (preg_match('/^\d+$/', $name)) {
+        return '#00ff00'; // Green
+    }
+    
+    // Communication pins - blue stroke
+    if (in_array($name, ['TX', 'RX', 'TX0', 'RX1', 'RXI', 'TXO', 'SDA', 'SCL', 'MOSI', 'MISO', 'SCK', 'CS'])) {
+        return '#0000ff'; // Blue
+    }
+    
+    // Special pins - purple stroke
+    if (in_array($name, ['RST', 'RESET', 'AREF'])) {
+        return '#800080'; // Purple
+    }
+    
+    // Default - gray stroke
+    return '#666666'; // Gray
+}
+
 function makeSVGClickable($svgContent, $pins, $pinMap) {
     // Create DOMDocument to parse SVG
     $dom = new DOMDocument();
@@ -669,14 +751,13 @@ function makeSVGClickable($svgContent, $pins, $pinMap) {
         .pin-hole {
             cursor: pointer !important;
             stroke-width: 2 !important;
-            fill: rgba(255, 0, 0, 0.4) !important;
             transition: all 0.2s ease !important;
             pointer-events: all !important;
             z-index: 1000 !important;
         }
         .pin-hole:hover {
             stroke-width: 3 !important;
-            fill: rgba(255, 0, 0, 0.7) !important;
+            opacity: 0.8 !important;
         }
         .pin-hole.selected {
             stroke-width: 4 !important;
@@ -686,13 +767,7 @@ function makeSVGClickable($svgContent, $pins, $pinMap) {
             display: none !important;
         }
         /* Group-specific colors */
-        .pin-hole.group-digital { stroke: #4ecdc4 !important; }
-        .pin-hole.group-power { stroke: #ff6b6b !important; }
-        .pin-hole.group-communication { stroke: #96ceb4 !important; }
-        .pin-hole.group-analog { stroke: #45b7d1 !important; }
-        .pin-hole.group-pwm { stroke: #feca57 !important; }
-        .pin-hole.group-special { stroke: #ff9ff3 !important; }
-        .pin-hole.group-other { stroke: #64748b !important; }
+        .pin-hole.group-ground { stroke: #000000 !important; }
     ';
     
     // Insert styles after opening svg tag
@@ -731,9 +806,11 @@ function makeSVGClickable($svgContent, $pins, $pinMap) {
                 $existingElement->setAttribute('data-group', $groupName);
                 $existingElement->setAttribute('data-pin-number', $pin['pin_number']);
                 
-                // Override styling to make it visible and clickable
-                $existingElement->setAttribute('fill', 'rgba(255, 0, 0, 0.4)');
-                $existingElement->setAttribute('stroke', '#ff6b6b');
+                // Set pin-specific color based on pin name
+                $pinColor = getPinColor($pinName);
+                $pinStrokeColor = getPinStrokeColor($pinName);
+                $existingElement->setAttribute('fill', $pinColor);
+                $existingElement->setAttribute('stroke', $pinStrokeColor);
                 $existingElement->setAttribute('stroke-width', '2');
                 $existingElement->setAttribute('cursor', 'pointer');
                 $existingElement->setAttribute('pointer-events', 'all');
@@ -769,9 +846,13 @@ function makeSVGClickable($svgContent, $pins, $pinMap) {
 function determinePinGroup($pinName) {
     $pinName = strtoupper($pinName);
     
-    // Power pins
-    if (strpos($pinName, 'GND') !== false || 
-        strpos($pinName, 'VCC') !== false || 
+    // Ground pins - separate group
+    if (strpos($pinName, 'GND') !== false || strpos($pinName, 'GROUND') !== false) {
+        return 'Ground';
+    }
+    
+    // Power pins (excluding GND)
+    if (strpos($pinName, 'VCC') !== false || 
         strpos($pinName, 'VIN') !== false || 
         strpos($pinName, '3.3V') !== false || 
         strpos($pinName, '5V') !== false) {
@@ -801,6 +882,8 @@ function determinePinGroup($pinName) {
     
     // Special pins
     if (strpos($pinName, 'RESET') !== false || 
+        strpos($pinName, 'RST') !== false ||
+        strpos($pinName, 'AREF') !== false ||
         strpos($pinName, 'CLK') !== false || 
         strpos($pinName, 'CLOCK') !== false) {
         return 'Special';

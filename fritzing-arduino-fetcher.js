@@ -6,7 +6,7 @@ const JSZip = require('jszip');
 const DatabaseUploader = require('./database-uploader');
 
 class FritzingArduinoFetcher {
-  constructor(apiBaseUrl = 'http://localhost:5000') {
+  constructor(apiBaseUrl = 'http://localhost:8080/micropinouts/api-php') {
     this.fzpBaseUrl = 'https://raw.githubusercontent.com/fritzing/fritzing-parts/develop/core/';
     this.svgBaseUrl = 'https://raw.githubusercontent.com/fritzing/fritzing-parts/develop/svg/core/breadboard/';
     this.fzpApiUrl = 'https://api.github.com/repos/fritzing/fritzing-parts/contents/core';

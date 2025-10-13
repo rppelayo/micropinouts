@@ -6,6 +6,7 @@ import { ArrowLeft, Filter, Info, Zap, Wifi, Cpu, Edit3, GitCompare } from 'luci
 import { boardsAPI, pinGroupsAPI } from '../services/api';
 import SVGViewer from '../components/SVGViewer';
 import CompareModal from '../components/CompareModal';
+import { useAuth } from '../contexts/AuthContext';
 
 const BoardDetailContainer = styled.div`
   padding: 40px 0;
@@ -172,6 +173,7 @@ const PinoutDiagram = styled.div`
   margin-bottom: 24px;
   overflow: hidden;
 `;
+
 
 const Pin = styled(motion.div)`
   position: absolute;
@@ -372,61 +374,6 @@ const ErrorMessage = styled.div`
   margin: 40px 0;
 `;
 
-const DebugToggle = styled.button`
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 12px;
-  z-index: 1000;
-  
-  &:hover {
-    background: #2563eb;
-  }
-`;
-
-const DebugPanel = styled.div`
-  position: fixed;
-  top: 60px;
-  right: 20px;
-  width: 400px;
-  max-height: 600px;
-  background: white;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 16px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
-  overflow-y: auto;
-  font-family: monospace;
-  font-size: 12px;
-`;
-
-const DebugTitle = styled.h3`
-  margin: 0 0 12px 0;
-  color: #374151;
-  font-size: 14px;
-`;
-
-const DebugSection = styled.div`
-  margin-bottom: 16px;
-  padding: 8px;
-  background: #f9fafb;
-  border-radius: 4px;
-`;
-
-const DebugPin = styled.div`
-  margin: 4px 0;
-  padding: 4px;
-  background: white;
-  border-radius: 3px;
-  border-left: 3px solid #3b82f6;
-`;
 
 
 const BoardDetail = () => {
@@ -438,38 +385,25 @@ const BoardDetail = () => {
   const [activeFilters, setActiveFilters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showDebug, setShowDebug] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showCompareModal, setShowCompareModal] = useState(false);
 
+  const { isAuthenticated } = useAuth();
 
   // Handle clicks on SVG pins
   const handleSVGPinClick = (event) => {
-    console.log('🔍 SVG Click Debug:');
-    console.log('- Event target:', event.target);
-    console.log('- Target tagName:', event.target.tagName);
-    console.log('- Target classes:', event.target.classList);
-    console.log('- Target id:', event.target.id);
-    console.log('- Target data-pin:', event.target.getAttribute('data-pin'));
-    console.log('- Target data-group:', event.target.getAttribute('data-group'));
-    
     const target = event.target;
     
     // Check if clicked element is a pin hole
     if (target.classList && target.classList.contains('pin-hole')) {
-      console.log('✅ Clicked element has pin-hole class');
       const pinName = target.getAttribute('data-pin');
-      console.log('- Pin name from data-pin:', pinName);
       
       if (pinName) {
         // Find the pin in our pins array by name
         const pin = pins.find(p => p.pin_name === pinName);
-        console.log('- Found pin in array:', pin);
-        console.log('- Total pins in array:', pins.length);
         
         if (pin) {
           setSelectedPin(pin);
-          console.log(`✅ SVG pin clicked successfully: ${pinName}`);
           
           // Remove previous selection
           document.querySelectorAll('.pin-hole.selected').forEach(el => {
@@ -478,16 +412,8 @@ const BoardDetail = () => {
           
           // Add selection to clicked pin
           target.classList.add('selected');
-        } else {
-          console.log('❌ Pin not found in pins array for:', pinName);
-          console.log('Available pin names:', pins.map(p => p.pin_name));
         }
-      } else {
-        console.log('❌ No data-pin attribute found');
       }
-    } else {
-      console.log('❌ Clicked element does not have pin-hole class');
-      console.log('- Available classes:', target.classList ? Array.from(target.classList) : 'none');
     }
   };
 
@@ -521,39 +447,6 @@ const BoardDetail = () => {
     filterSVGElements();
   }, [activeFilters, pins, board]);
 
-  // Debug effect to log data when loaded
-  useEffect(() => {
-    if (board && pins.length > 0 && pinGroups.length > 0) {
-      console.log('🔍 Board Data Loaded Debug:');
-      console.log('- Board:', board.name, 'ID:', board.id);
-      console.log('- SVG content length:', board.svg_content?.length);
-      console.log('- Pins count:', pins.length);
-      console.log('- Pin groups count:', pinGroups.length);
-      console.log('- First 3 pins:', pins.slice(0, 3));
-      console.log('- Pin groups:', pinGroups);
-      
-      // Check SVG content
-      if (board.svg_content) {
-        const hasPinHole = board.svg_content.includes('pin-hole');
-        const hasDataPin = board.svg_content.includes('data-pin');
-        const pinHoleCount = (board.svg_content.match(/class="pin-hole[^"]*"/g) || []).length;
-        const dataPinCount = (board.svg_content.match(/data-pin="[^"]*"/g) || []).length;
-        
-        console.log('🔍 SVG Content Analysis:');
-        console.log('- Has pin-hole class:', hasPinHole);
-        console.log('- Has data-pin attribute:', hasDataPin);
-        console.log('- Pin-hole elements count:', pinHoleCount);
-        console.log('- Data-pin elements count:', dataPinCount);
-        
-        if (pinHoleCount > 0) {
-          const firstPinMatch = board.svg_content.match(/<circle[^>]*class="pin-hole[^"]*"[^>]*>/);
-          if (firstPinMatch) {
-            console.log('- First pin element:', firstPinMatch[0]);
-          }
-        }
-      }
-    }
-  }, [board, pins, pinGroups]);
 
   // Check if user is admin
   useEffect(() => {
@@ -585,6 +478,7 @@ const BoardDetail = () => {
   useEffect(() => {
     fetchData();
   }, [id]);
+
 
   // Refetch data when page becomes visible (e.g., returning from edit page)
   useEffect(() => {
@@ -661,9 +555,6 @@ const BoardDetail = () => {
             {board.name}
           </BoardTitle>
           <BoardSubtitle>{board.description}</BoardSubtitle>
-          <DebugToggle onClick={() => setShowDebug(!showDebug)}>
-            {showDebug ? 'Hide Debug' : 'Show Debug'}
-          </DebugToggle>
           
           <BoardSpecs>
             <SpecItem>
@@ -838,116 +729,6 @@ const BoardDetail = () => {
           </ContentGrid>
       </div>
       
-      {showDebug && (
-        <DebugPanel>
-          <DebugTitle>Debug Information</DebugTitle>
-          
-          <DebugSection>
-            <strong>Board Info:</strong><br/>
-            ID: {board?.id}<br/>
-            Name: {board?.name}<br/>
-            Has SVG: {board?.svg_content ? 'Yes' : 'No'}<br/>
-            SVG Length: {board?.svg_content?.length || 0} chars
-          </DebugSection>
-          
-          <DebugSection>
-            <strong>Pin Statistics:</strong><br/>
-            Total Pins: {pins.length}<br/>
-            Filtered Pins: {filteredPins.length}<br/>
-            Active Filters: {activeFilters.length}
-          </DebugSection>
-          
-          <DebugSection>
-            <strong>Pin Positions (First 10):</strong>
-            {pins.slice(0, 10).map(pin => {
-              // Calculate breadboard and transformed positions (same logic as in pin rendering)
-              const containerWidth = 800; // Approximate container width
-              const containerHeight = 600; // Approximate container height
-              const svgScale = 0.9;
-              const actualSvgWidth = containerWidth * svgScale;
-              const actualSvgHeight = containerHeight * svgScale;
-              const offsetX = (containerWidth - actualSvgWidth) / 2;
-              const offsetY = (containerHeight - actualSvgHeight) / 2;
-              
-              // Use direct SVG coordinates (no transformation needed)
-              const svgX = pin.position_x || 0;
-              const svgY = pin.position_y || 0;
-              
-              // Calculate transformed positions
-              const scaleX = actualSvgWidth / 75.7249;
-              const scaleY = actualSvgHeight / 114.353;
-              const transformedX = (svgX * scaleX) + offsetX;
-              const transformedY = (svgY * scaleY) + offsetY - 20; // Move labels up slightly
-              
-              return (
-                <DebugPin key={pin.id}>
-                  <strong>{pin.pin_number}</strong> ({pin.pin_name})<br/>
-                  SVG Position: ({pin.position_x}, {pin.position_y})<br/>
-                  SVG ID: {pin.svg_id || 'N/A'}<br/>
-                  Transformed Position: ({transformedX.toFixed(1)}, {transformedY.toFixed(1)})<br/>
-                  Group: {pin.group_name || 'Unknown'}<br/>
-                  Functions: {pin.functions || 'None'}
-                </DebugPin>
-              );
-            })}
-          </DebugSection>
-          
-          <DebugSection>
-            <strong>Pin Groups:</strong>
-            {pinGroups.map(group => (
-              <DebugPin key={group.id}>
-                <strong>{group.name}</strong><br/>
-                Color: {group.color}<br/>
-                Count: {pins.filter(p => p.pin_group_id === group.id).length}
-              </DebugPin>
-            ))}
-          </DebugSection>
-          
-          <DebugSection>
-            <strong>SVG Content Analysis:</strong>
-            <DebugPin>
-              <strong>SVG Content:</strong><br/>
-              Length: {board?.svg_content?.length || 0} characters<br/>
-              Has pin-hole class: {board?.svg_content?.includes('pin-hole') ? '✅ Yes' : '❌ No'}<br/>
-              Has data-pin attribute: {board?.svg_content?.includes('data-pin') ? '✅ Yes' : '❌ No'}<br/>
-              Has group-digital class: {board?.svg_content?.includes('group-digital') ? '✅ Yes' : '❌ No'}<br/>
-              Has data-group="Digital": {board?.svg_content?.includes('data-group="Digital"') ? '✅ Yes' : '❌ No'}<br/>
-              Pin-hole elements count: {board?.svg_content?.match(/class="pin-hole[^"]*"/g)?.length || 0}<br/>
-              Data-pin elements count: {board?.svg_content?.match(/data-pin="[^"]*"/g)?.length || 0}
-            </DebugPin>
-          </DebugSection>
-          
-          <DebugSection>
-            <strong>Click Test:</strong>
-            <DebugPin>
-              Click on any pin in the SVG above and check the browser console for debug information.
-              <br/><br/>
-              <button 
-                onClick={() => {
-                  console.log('🔍 Manual Debug Check:');
-                  console.log('- Board SVG content length:', board?.svg_content?.length);
-                  console.log('- Pins array length:', pins.length);
-                  console.log('- Pin groups length:', pinGroups.length);
-                  console.log('- First 5 pins:', pins.slice(0, 5));
-                  
-                  // Check for pin-hole elements in DOM
-                  const pinHoleElements = document.querySelectorAll('.pin-hole');
-                  console.log('- Pin-hole elements in DOM:', pinHoleElements.length);
-                  
-                  if (pinHoleElements.length > 0) {
-                    console.log('- First pin-hole element:', pinHoleElements[0]);
-                    console.log('- First pin-hole classes:', pinHoleElements[0].classList);
-                    console.log('- First pin-hole data-pin:', pinHoleElements[0].getAttribute('data-pin'));
-                  }
-                }}
-                style={{ padding: '8px 16px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-              >
-                Run Manual Debug Check
-              </button>
-            </DebugPin>
-          </DebugSection>
-        </DebugPanel>
-      )}
 
       <CompareModal
         isOpen={showCompareModal}

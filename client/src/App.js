@@ -14,7 +14,7 @@ import './styles/App.css';
 function App() {
   return (
     <AuthProvider>
-      <Router basename="/micropinouts/build">
+      <Router basename="/micropinouts">
         <div className="App">
           <Header />
           <main className="main-content">

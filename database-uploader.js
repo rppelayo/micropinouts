@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const SVGProcessor = require('./utils/svgProcessor');
 
 class DatabaseUploader {
-  constructor(apiBaseUrl = 'http://localhost:5000', adminToken = null) {
+  constructor(apiBaseUrl = 'http://localhost:8080/micropinouts/api-php', adminToken = null) {
     this.apiBaseUrl = apiBaseUrl;
     this.adminToken = adminToken;
     this.uploadedBoards = [];
@@ -27,8 +27,8 @@ class DatabaseUploader {
 
       const options = {
         hostname: 'localhost',
-        port: 5000,
-        path: '/api/admin/login',
+        port: 8080,
+        path: '/micropinouts/api-php/upload-from-fetcher.php',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,7 +71,7 @@ class DatabaseUploader {
   // Upload board data to the database via API
   async uploadBoardToDatabase(boardData, pins) {
     try {
-      const token = await this.getAdminToken();
+      // No authentication needed for PHP API
       
       const uploadData = {
         boardData: {
@@ -98,13 +98,13 @@ class DatabaseUploader {
         
         const options = {
           hostname: 'localhost',
-          port: 5000,
-          path: '/api/admin/boards/from-fritzing',
+          port: 8080,
+          path: '/micropinouts/api-php/admin/boards/from-fritzing',
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Content-Length': Buffer.byteLength(postData),
-            'Authorization': `Bearer ${token}`
+            'Authorization': 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwicm9sZSI6ImFkbWluIiwiZXhwIjoxNzYwNDEzNDgxfQ.LLJsDK7tv1iWz9YrX1w55u_jfZ2ANktIM2akNAtaSq4'
           }
         };
 
@@ -118,12 +118,31 @@ class DatabaseUploader {
           res.on('end', () => {
             try {
               const response = JSON.parse(data);
-              if (res.statusCode === 200 || res.statusCode === 201) {
-                console.log(`✅ Successfully uploaded: ${boardData.name}`);
-                resolve(response);
+              if (res.statusCode === 200) {
+                if (response.message && response.message.includes('Board created successfully')) {
+                  console.log(`✅ Successfully uploaded: ${boardData.name} (ID: ${response.data.boardId}, Pins: ${response.data.pinCount})`);
+                  this.uploadedBoards.push({
+                    name: boardData.name,
+                    id: response.data.boardId,
+                    pins: response.data.pinCount
+                  });
+                  resolve(response);
+                } else {
+                  const errorMsg = `API Error: ${res.statusCode} - ${response.error || data}`;
+                  console.error(`❌ Upload failed for ${boardData.name}: ${errorMsg}`);
+                  this.failedUploads.push({
+                    name: boardData.name,
+                    error: errorMsg
+                  });
+                  reject(new Error(errorMsg));
+                }
               } else {
                 const errorMsg = `API Error: ${res.statusCode} - ${response.error || data}`;
                 console.error(`❌ Upload failed for ${boardData.name}: ${errorMsg}`);
+                this.failedUploads.push({
+                  name: boardData.name,
+                  error: errorMsg
+                });
                 reject(new Error(errorMsg));
               }
             } catch (error) {

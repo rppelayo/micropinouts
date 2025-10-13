@@ -617,14 +617,38 @@ const CompareBoards = () => {
 
   // Handle pin clicks
   const handlePinClick = (event, boardId) => {
-    const pinElement = event.target.closest('[data-pin-id]');
-    if (pinElement) {
-      const pinId = pinElement.getAttribute('data-pin-id');
-      const pins = boardPins[boardId] || [];
-      const pin = pins.find(p => p.id.toString() === pinId);
-      if (pin) {
-        setSelectedPin({ ...pin, boardId, boardName: boards.find(b => b.id === boardId)?.name });
+    console.log('🔍 Compare SVG Click Debug:');
+    console.log('- Event target:', event.target);
+    console.log('- Target tagName:', event.target.tagName);
+    console.log('- Target classes:', event.target.classList);
+    console.log('- Target data-pin:', event.target.getAttribute('data-pin'));
+    
+    const target = event.target;
+    
+    // Check if clicked element is a pin hole
+    if (target.classList && target.classList.contains('pin-hole')) {
+      console.log('✅ Clicked element has pin-hole class');
+      const pinName = target.getAttribute('data-pin');
+      console.log('- Pin name from data-pin:', pinName);
+      
+      if (pinName) {
+        // Find the pin in our pins array by name
+        const pins = boardPins[boardId] || [];
+        const pin = pins.find(p => p.pin_name === pinName);
+        console.log('- Found pin in array:', pin);
+        
+        if (pin) {
+          const boardName = boards.find(b => b.id === boardId)?.name;
+          setSelectedPin({ ...pin, boardId, boardName });
+          console.log('✅ Pin info set:', { ...pin, boardId, boardName });
+        } else {
+          console.log('❌ Pin not found in array for name:', pinName);
+        }
+      } else {
+        console.log('❌ No data-pin attribute found');
       }
+    } else {
+      console.log('❌ Clicked element does not have pin-hole class');
     }
   };
 
@@ -928,9 +952,10 @@ const CompareBoards = () => {
                       <Zap size={16} />
                       Pinout Diagram
                     </SectionTitle>
-                    <SVGContainer onClick={(e) => handlePinClick(e, board.id)}>
+                    <SVGContainer>
                       <SVGViewer
                         svgContent={board.svg_content}
+                        onPinClick={(e) => handlePinClick(e, board.id)}
                         enableZoom={true}
                         enablePan={true}
                         style={{ height: '100%', width: '100%' }}
