@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Settings, LogOut, GitCompare, Link as LinkIcon } from 'lucide-react';
+import { Home, Settings, LogOut, GitCompare, Link as LinkIcon, Info, ChevronDown, FileText, Shield } from 'lucide-react';
 import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -91,10 +91,76 @@ const UserInfo = styled.span`
   opacity: 0.9;
 `;
 
+const DropdownContainer = styled.div`
+  position: relative;
+  display: inline-block;
+`;
+
+const DropdownButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: ${props => props.$active ? '#3b82f6' : '#64748b'};
+  font-weight: ${props => props.$active ? '600' : '500'};
+  font-size: inherit;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  background: none;
+  border: none;
+  cursor: pointer;
+  
+  &:hover {
+    color: #3b82f6;
+    background-color: #f1f5f9;
+  }
+`;
+
+const DropdownMenu = styled.div`
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  min-width: 200px;
+  z-index: 1000;
+  opacity: ${props => props.$isOpen ? 1 : 0};
+  visibility: ${props => props.$isOpen ? 'visible' : 'hidden'};
+  transform: ${props => props.$isOpen ? 'translateY(0)' : 'translateY(-10px)'};
+  transition: all 0.2s ease;
+`;
+
+const DropdownItem = styled(Link)`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  text-decoration: none;
+  color: #374151;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: #f1f5f9;
+    color: #3b82f6;
+  }
+  
+  &:first-child {
+    border-radius: 8px 8px 0 0;
+  }
+  
+  &:last-child {
+    border-radius: 0 0 8px 8px;
+  }
+`;
+
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuth();
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
   
   const handleAdminClick = () => {
     if (isAuthenticated) {
@@ -114,7 +180,7 @@ const Header = () => {
     <HeaderContainer>
       <HeaderContent>
         <Logo to="/">
-          <LogoImage src="/micropinouts/logo.png" alt="MicroPinouts Logo" />
+          <LogoImage src="/logo.png" alt="MicroPinouts Logo" />
         </Logo>
         <Nav>
           <NavLink to="/" $active={location.pathname === '/'}>
@@ -132,6 +198,32 @@ const Header = () => {
             <LinkIcon size={20} />
             Wiring Guides
           </NavLink>
+          <DropdownContainer>
+            <DropdownButton 
+              $active={location.pathname === '/about' || location.pathname === '/legal' || location.pathname === '/privacy'}
+              onClick={() => navigate('/about')}
+              onMouseEnter={() => setIsAboutOpen(true)}
+              onMouseLeave={() => setIsAboutOpen(false)}
+            >
+              <Info size={20} />
+              About
+              <ChevronDown size={16} />
+            </DropdownButton>
+            <DropdownMenu 
+              $isOpen={isAboutOpen}
+              onMouseEnter={() => setIsAboutOpen(true)}
+              onMouseLeave={() => setIsAboutOpen(false)}
+            >
+              <DropdownItem to="/legal">
+                <FileText size={16} />
+                Legal and Licensing
+              </DropdownItem>
+              <DropdownItem to="/privacy">
+                <Shield size={16} />
+                Privacy Policy
+              </DropdownItem>
+            </DropdownMenu>
+          </DropdownContainer>
           {isAuthenticated && (
             <NavLink to="/admin" $active={location.pathname === '/admin'}>
               <Settings size={20} />

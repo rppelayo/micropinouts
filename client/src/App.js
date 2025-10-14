@@ -11,6 +11,9 @@ import Admin from './pages/Admin';
 import CompareBoards from './pages/CompareBoards';
 import WiringGuides from './pages/WiringGuides';
 import WiringGuide from './pages/WiringGuide';
+import Legal from './pages/Legal';
+import Privacy from './pages/Privacy';
+import About from './pages/About';
 import './styles/App.css';
 
 function App() {
@@ -35,6 +38,9 @@ function App() {
                   <Route path="/compare" element={<CompareBoards />} />
                   <Route path="/wiring-guides" element={<WiringGuides />} />
                   <Route path="/wiring-guide/:slug" element={<WiringGuide />} />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/legal" element={<Legal />} />
+                  <Route path="/privacy" element={<Privacy />} />
                   <Route path="/admin/boards/:id/edit" element={<EditBoard />} />
                   <Route path="/admin" element={<Admin />} />
                 </Routes>
