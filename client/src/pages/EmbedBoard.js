@@ -290,10 +290,10 @@ const EmbedBoard = () => {
 
   return (
     <EmbedContainer>
-      <BackLink href={`${window.location.origin}/micropinouts/board/${id}`} target="_blank">
+      <BackLink href={`${window.location.origin}/board/${id}`} target="_blank">
         <ArrowLeft size={14} />
         View on
-        <BackLinkLogo src="/micropinouts/logo.png" alt="MicroPinouts" />
+        <BackLinkLogo src="/logo.png" alt="MicroPinouts" />
       </BackLink>
       
       <PinoutContainer>

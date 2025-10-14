@@ -803,7 +803,7 @@ const BoardDetail = () => {
   // Embed functions
   const generateEmbedCode = () => {
     const baseUrl = window.location.origin;
-    const embedUrl = `${baseUrl}/micropinouts/embed/board/${id}`;
+    const embedUrl = `${baseUrl}/embed/board/${id}`;
     const iframeCode = `<iframe src="${embedUrl}" width="800" height="600" frameborder="0" style="border: 1px solid #e2e8f0; border-radius: 8px;"></iframe>`;
     setEmbedCode(iframeCode);
     setShowEmbedModal(true);
@@ -1079,7 +1079,7 @@ const BoardDetail = () => {
                 <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600' }}>Preview:</h4>
                 <EmbedPreview>
                   <iframe 
-                    src={`${window.location.origin}/micropinouts/embed/board/${id}`}
+                    src={`${window.location.origin}/embed/board/${id}`}
                     width="100%" 
                     height="400" 
                     frameBorder="0"

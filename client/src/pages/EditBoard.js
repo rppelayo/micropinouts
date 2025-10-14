@@ -726,7 +726,7 @@ const EditBoard = () => {
         'Content-Type': 'application/json'
       };
 
-      const response = await fetch(`http://localhost:8080/micropinouts/api-php/admin/boards/${id}`, {
+      const response = await fetch(`/api-php/admin/boards/${id}`, {
         method: 'PUT',
         headers,
         body: JSON.stringify({
@@ -773,7 +773,7 @@ const EditBoard = () => {
 
       for (const pin of pinsToUpdate) {
         const position = pinPositions[pin.id];
-        await fetch(`http://localhost:8080/micropinouts/api-php/admin/pins/${pin.id}`, {
+        await fetch(`/api-php/admin/pins/${pin.id}`, {
           method: 'PUT',
           headers,
           body: JSON.stringify({

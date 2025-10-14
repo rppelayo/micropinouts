@@ -980,7 +980,7 @@ const WiringGuideContent = () => {
 
   const fetchPins = async (boardId, type) => {
     try {
-      const response = await fetch(`http://localhost:8080/micropinouts/api-php/admin/boards/${boardId}/pins`, {
+      const response = await fetch(`/api-php/admin/boards/${boardId}/pins`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         }
@@ -1125,7 +1125,7 @@ const WiringGuideContent = () => {
       });
       
       // Publish the guide
-      const publishResponse = await fetch(`http://localhost:8080/micropinouts/api-php/admin/wiring-guide/${result.data.wiringGuideId}/publish`, {
+      const publishResponse = await fetch(`/api-php/admin/wiring-guide/${result.data.wiringGuideId}/publish`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1154,7 +1154,7 @@ const WiringGuideContent = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/micropinouts/api-php/admin/wiring-guide/${currentWiringGuide.id}/publish`, {
+      const response = await fetch(`/api-php/admin/wiring-guide/${currentWiringGuide.id}/publish`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1237,7 +1237,7 @@ const WiringGuideContent = () => {
 
   const togglePublish = async (id, currentStatus) => {
     try {
-      const response = await fetch(`http://localhost:8080/micropinouts/api-php/admin/wiring-guide/${id}/publish`, {
+      const response = await fetch(`/api-php/admin/wiring-guide/${id}/publish`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1265,7 +1265,7 @@ const WiringGuideContent = () => {
     if (!window.confirm('Are you sure you want to delete this wiring guide?')) return;
     
     try {
-      const response = await fetch(`http://localhost:8080/micropinouts/api-php/admin/wiring-guide/${id}`, {
+      const response = await fetch(`/api-php/admin/wiring-guide/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
@@ -1291,8 +1291,8 @@ const WiringGuideContent = () => {
     // Fetch board names if not already present
     if (!guide.sensor_name || !guide.microcontroller_name) {
       try {
-        const sensorResponse = await fetch(`http://localhost:8080/micropinouts/api-php/boards/${guide.sensor_board_id}`);
-        const microResponse = await fetch(`http://localhost:8080/micropinouts/api-php/boards/${guide.microcontroller_board_id}`);
+        const sensorResponse = await fetch(`/api-php/boards/${guide.sensor_board_id}`);
+        const microResponse = await fetch(`/api-php/boards/${guide.microcontroller_board_id}`);
         
         if (sensorResponse.ok && microResponse.ok) {
           const sensorData = await sensorResponse.json();
@@ -1320,7 +1320,7 @@ const WiringGuideContent = () => {
     
     setEditLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/micropinouts/api-php/admin/wiring-guide/${editingGuide.id}`, {
+      const response = await fetch(`/api-php/admin/wiring-guide/${editingGuide.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080/micropinouts/api-php';
+const API_BASE_URL = '/api-php';
 
 const adminApi = axios.create({
   baseURL: API_BASE_URL,
