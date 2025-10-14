@@ -60,8 +60,8 @@ const upload = multer({
 
 // Simple admin authentication (in production, use proper auth)
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'a^7}u~OA61(a';
+const JWT_SECRET = process.env.JWT_SECRET || '58b6ad0a4e3d282151e4eba5044c1804d159e9f2ae0c427c67b526a2006a0b59';
 
 // Middleware to verify admin token
 const verifyAdminToken = (req, res, next) => {

@@ -19,7 +19,7 @@ import './styles/App.css';
 function App() {
   return (
     <AuthProvider>
-      <Router basename="/micropinouts">
+      <Router basename="/">
         <Routes>
           {/* Embed routes without header */}
           <Route path="/embed/*" element={<EmbedLayout />}>
