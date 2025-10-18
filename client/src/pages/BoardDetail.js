@@ -671,32 +671,65 @@ const BoardDetail = () => {
 
   const { isAuthenticated } = useAuth();
 
-  // Handle clicks on SVG pins
-  const handleSVGPinClick = (event) => {
-    const target = event.target;
-    
-    // Check if clicked element is a pin hole
-    if (target.classList && target.classList.contains('pin-hole')) {
-      const pinName = target.getAttribute('data-pin');
-      
-      if (pinName) {
-        // Find the pin in our pins array by name
-        const pin = pins.find(p => p.pin_name === pinName);
-        
-        if (pin) {
-          setSelectedPin(pin);
-          
-          // Remove previous selection
-          document.querySelectorAll('.pin-hole.selected').forEach(el => {
-            el.classList.remove('selected');
-          });
-          
-          // Add selection to clicked pin
-          target.classList.add('selected');
-        }
+  // Optional: safe CSS.escape fallback
+const cssEscape = (window.CSS && CSS.escape) ? CSS.escape : (s) => String(s).replace(/"/g, '\\"');
+
+const handleSVGPinClick = (arg) => {
+    // If we received the new payload shape, use it
+    let payload = (arg && typeof arg === 'object' && 'pin' in arg) ? arg : null;
+
+    // Legacy fallback: arg was a DOM event
+    if (!payload && arg && arg.target) {
+      const t = arg.target;
+      const el = t.closest ? t.closest('.pin-rect, .pin-hole') : null;
+      if (el) {
+        payload = {
+          pin: el.getAttribute('data-pin') || '',
+          svgId: el.getAttribute('data-svgid') || el.id || '',
+          pinNumber: el.getAttribute('data-pin-number') || ''
+        };
       }
     }
+
+    if (!payload) return;
+
+    const { pin: pinName, svgId, pinNumber } = payload;
+
+    // Find the pin record in your pins array
+    const pin = pins.find(p =>
+      (pinName && p.pin_name === pinName) ||
+      (svgId && p.svgId === svgId) ||
+      (pinNumber && String(p.pin_number) === String(pinNumber))
+    );
+    if (!pin) return;
+
+    setSelectedPin(pin);
+
+    // Clear previous selection on BOTH shapes
+    document.querySelectorAll('.pin-hole.selected, .pin-rect.selected')
+      .forEach(elm => elm.classList.remove('selected'));
+
+    // Highlight all visuals that correspond to this pin (hole + rect)
+    const selectors = [];
+    if (svgId) {
+      selectors.push(`.pin-hole[data-svgid="${cssEscape(svgId)}"]`,
+                    `.pin-rect[data-svgid="${cssEscape(svgId)}"]`);
+    }
+    if (pinName) {
+      selectors.push(`.pin-hole[data-pin="${cssEscape(pinName)}"]`,
+                    `.pin-rect[data-pin="${cssEscape(pinName)}"]`);
+    }
+    if (pinNumber) {
+      selectors.push(`.pin-hole[data-pin-number="${cssEscape(pinNumber)}"]`,
+                    `.pin-rect[data-pin-number="${cssEscape(pinNumber)}"]`);
+    }
+
+    if (selectors.length) {
+      document.querySelectorAll(selectors.join(','))
+        .forEach(elm => elm.classList.add('selected'));
+    }
   };
+
 
   // Function to filter SVG elements based on active group filters
   const filterSVGElements = () => {

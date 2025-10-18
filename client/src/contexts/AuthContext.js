@@ -64,7 +64,7 @@ export const AuthProvider = ({ children }) => {
     
     try {
       // Use a simple token verification endpoint instead of loading boards
-      const response = await fetch('http://localhost:8080/micropinouts/api-php/admin/verify-token', {
+      const response = await fetch('/api-php/admin/verify-token', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

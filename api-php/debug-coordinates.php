@@ -203,7 +203,8 @@ function testSVGCoordinateExtraction() {
     
     echo "Testing with " . count($pins) . " pins...\n";
     
-    $result = extractCoordinatesFromSVG($svgContent, $pins);
+    //$result = extractCoordinatesFromSVG($svgContent, $pins);
+    $result = extract_pin_centers($svgContent, $pins);
     
     foreach ($result as $pin) {
         echo "Pin {$pin['pin_name']} ({$pin['svgId']}): x={$pin['position_x']}, y={$pin['position_y']}\n";

@@ -185,7 +185,25 @@ const SVGViewer = ({
 
   // Handle reset view
   const handleReset = () => {
-    setZoom(initialZoom);
+    const wrapper = svgRef.current;
+    const svg = wrapper ? wrapper.querySelector('svg') : null;
+    if (!svg) {
+      setZoom(initialZoom);
+      setPan({ x: 0, y: 0 });
+      return;
+    }
+    const ow = parseFloat(svg.getAttribute('data-orig-vbw') || '0');
+    const oh = parseFloat(svg.getAttribute('data-orig-vbh') || '0');
+    const padX = parseFloat(svg.getAttribute('data-padx') || '0');
+    const padY = parseFloat(svg.getAttribute('data-pady') || '0');
+    const vb = (svg.getAttribute('viewBox') || '0 0 0 0').trim().split(/\s+/).map(parseFloat);
+    const vw = vb.length === 4 ? vb[2] : ow + 2*padX;
+    const vh = vb.length === 4 ? vb[3] : oh + 2*padY;
+    const zx = vw / Math.max(ow, 1e-6);
+    const zy = vh / Math.max(oh, 1e-6);
+    const padCompZoom = Math.min(zx, zy);
+
+    setZoom(Math.max(minZoom, Math.min(maxZoom, padCompZoom * (initialZoom || 1))));
     setPan({ x: 0, y: 0 });
   };
 
@@ -249,10 +267,28 @@ const SVGViewer = ({
       e.preventDefault();
       return;
     }
+
+  const target = e.target;
+  if (!target || !(target instanceof Element)) return;
+
+  const el = target.closest('.pin-rect, .pin-hole');
+  if (!el) return;
+
+  const payload = {
+    pin: el.dataset.pin || '',
+    group: el.dataset.group || '',
+    svgId: el.dataset.svgid || el.id || '',
+    pinNumber: el.dataset.pinNumber || '',
+    source: el.classList && el.classList.contains('pin-rect') ? 'rect' : 'hole',
+  };
+
+  if (typeof onPinClick === 'function') {
+    onPinClick(payload, e);
+  }
     
-    if (onPinClick) {
+/*     if (onPinClick) {
       onPinClick(e);
-    }
+    } */
   };
 
   // Handle touch events for mobile
@@ -320,6 +356,114 @@ const SVGViewer = ({
     };
   }, [enableZoom, zoom, minZoom, maxZoom]);
 
+  useEffect(() => {
+    const root = svgRef.current;
+    if (!root) return;
+
+    // Try to find the <svg> element (it may not be there on first render)
+    let cancelled = false;
+    let svgEl = root.querySelector('svg');
+
+    const attach = () => {
+      if (!svgEl || cancelled) return;
+      const handler = (e) => {
+        // TEMP: sanity log
+        // console.log('[SVG click]', e.target); 
+
+        if (isPanning) return;
+        const t = e.target;
+        if (!t || !(t instanceof Element)) return;
+        const el = t.closest('.pin-rect, .pin-hole');
+        if (!el) return;
+
+        const payload = {
+          pin: el.dataset.pin || '',
+          group: el.dataset.group || '',
+          svgId: el.dataset.svgid || el.id || '',
+          pinNumber: el.dataset.pinNumber || '',
+          source: el.classList && el.classList.contains('pin-rect') ? 'rect' : 'hole',
+        };
+
+        if (typeof onPinClick === 'function') onPinClick(payload);
+      };
+
+      svgEl.addEventListener('click', handler);
+      // store cleanup on the element so we remove the *same* handler
+      svgEl.__pinHandler = handler;
+    };
+
+    // If not present yet, observe until it appears
+    if (!svgEl) {
+      const obs = new MutationObserver(() => {
+        svgEl = root.querySelector('svg');
+        if (svgEl) {
+          attach();
+          obs.disconnect();
+        }
+      });
+      obs.observe(root, { childList: true, subtree: true });
+      return () => { cancelled = true; obs.disconnect(); };
+    } else {
+      attach();
+      return () => {
+        if (svgEl && svgEl.__pinHandler) {
+          svgEl.removeEventListener('click', svgEl.__pinHandler);
+          delete svgEl.__pinHandler;
+        }
+      };
+    }
+  }, [isPanning, onPinClick, svgContent]); // include svgContent so it rebinds after content changes
+
+  useEffect(() => {
+    const wrapper = svgRef.current;
+    if (!wrapper) return;
+
+    let svgEl = wrapper.querySelector('svg');
+    if (!svgEl) {
+      const obs = new MutationObserver(() => {
+        svgEl = wrapper.querySelector('svg');
+        if (svgEl) {
+          initZoomFromData(svgEl);
+          obs.disconnect();
+        }
+      });
+      obs.observe(wrapper, { childList: true, subtree: true });
+      return () => obs.disconnect();
+    } else {
+      initZoomFromData(svgEl);
+    }
+
+    function initZoomFromData(svg) {
+      // Read attributes written by server
+      const ox = parseFloat(svg.getAttribute('data-orig-vbx') || '0');
+      const oy = parseFloat(svg.getAttribute('data-orig-vby') || '0');
+      const ow = parseFloat(svg.getAttribute('data-orig-vbw') || '0');
+      const oh = parseFloat(svg.getAttribute('data-orig-vbh') || '0');
+      const padX = parseFloat(svg.getAttribute('data-padx') || '0');
+      const padY = parseFloat(svg.getAttribute('data-pady') || '0');
+
+      // If no metadata, do nothing
+      if (!ow || !oh) return;
+
+      // Current expanded viewBox
+      const vb = (svg.getAttribute('viewBox') || '0 0 0 0').trim().split(/\s+/).map(parseFloat);
+      const vw = vb.length === 4 ? vb[2] : ow + 2*padX;
+      const vh = vb.length === 4 ? vb[3] : oh + 2*padY;
+
+      // Zoom factor that neutralizes the padding (fit board, not padded canvas)
+      const zx = vw / Math.max(ow, 1e-6);
+      const zy = vh / Math.max(oh, 1e-6);
+      const padCompZoom = Math.min(zx, zy); // keep aspect
+
+      // Optionally, multiply by your props.initialZoom (defaults to 1)
+      setZoom(prev => Math.max(minZoom, Math.min(maxZoom, padCompZoom * (initialZoom || 1))));
+
+      // Optional: keep center; your transformOrigin is 'center center', so no extra pan needed.
+      // If you want to center explicitly:
+      // setPan({ x: 0, y: 0 });
+    }
+  }, [svgContent, initialZoom, minZoom, maxZoom]);
+
   return (
     <ViewerContainer className={className}>
       <ViewerHeader>
@@ -378,14 +522,15 @@ const SVGViewer = ({
           isPanning={isPanning}
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
-          onClick={handleClick}
+          //onClick={handleClick}
         >
           <div
             ref={svgRef}
+            id="svgContainerInner"
             dangerouslySetInnerHTML={{
               __html: svgContent?.replace(
                 /<svg([^>]*)>/i,
-                '<svg$1 style="width: 100%; height: auto; max-width: 100%; max-height: 400px; object-fit: contain;" width="100%" height="auto">'
+                '<svg$1 style="width: 100%; height: auto; max-width: 100%; max-height: 400px; object-fit: contain; overflow: visible;" width="100%" height="auto">'
               ) || '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #64748b;">No SVG content available</div>'
             }}
           />

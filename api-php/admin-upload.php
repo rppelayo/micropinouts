@@ -207,7 +207,7 @@ function processFritzingFile($filePath, $fileType) {
     if ($fileType === 'SVG') {
         // For SVG files, just return the content
         $svgContent = file_get_contents($filePath);
-        
+        $svgContent = replacePathCirclesWithCircles($svgContent);
         return [
             'pins' => [],
             'totalPins' => 0,
@@ -225,6 +225,1071 @@ function processFritzingFile($filePath, $fileType) {
         return parseFritzingArchive($filePath);
     }
 }
+
+/**
+ * Build bbox (min/max) from pin centers — this is the “rectangle” we point to.
+ */
+function build_pin_bbox(array $pinCenters): array {
+    $xs = array_column($pinCenters, 'x');
+    $ys = array_column($pinCenters, 'y');
+    return [
+        'minX' => min($xs), 'maxX' => max($xs),
+        'minY' => min($ys), 'maxY' => max($ys),
+        'width' => max($xs) - min($xs),
+        'height' => max($ys) - min($ys),
+    ];
+}
+
+/**
+ * Corridor-based blocker: returns true if the bar from (cx,cy) in 'dir'
+ * of length $reach (your Lfixed) would pass through any other pin within a
+ * lateral corridor of +/- $corrHalf.
+ */
+function path_blocked_corridor(array $self, string $dir, float $reach, array $pinCenters, float $corrHalf): bool {
+    $cx = $self['x']; $cy = $self['y'];
+
+    foreach ($pinCenters as $id => $p) {
+        if ($p === $self) continue;
+        $px = $p['x']; $py = $p['y'];
+
+        if ($dir === 'E') {
+            // in front horizontally and within vertical corridor
+            if ($px > $cx && $px <= $cx + $reach && abs($py - $cy) <= $corrHalf) return true;
+        } elseif ($dir === 'W') {
+            if ($px < $cx && $px >= $cx - $reach && abs($py - $cy) <= $corrHalf) return true;
+        } elseif ($dir === 'S') {
+            if ($py > $cy && $py <= $cy + $reach && abs($px - $cx) <= $corrHalf) return true;
+        } elseif ($dir === 'N') {
+            if ($py < $cy && $py >= $cy - $reach && abs($px - $cx) <= $corrHalf) return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Pick NESW direction to the nearest edge, but avoid overlaps using a corridor check
+ * measured against the fixed length $reach (Lfixed).
+ * Returns array[id] = 'N'|'S'|'E'|'W'
+ */
+function compute_pin_directions_fixed(array $pinCenters, array $bbox, float $reach, float $corrHalf): array {
+    $out = [];
+    $tieOrder = ['N','S','E','W']; // tie priority for equal distances
+
+    foreach ($pinCenters as $id => $pos) {
+        $cx = $pos['x']; $cy = $pos['y'];
+        $dists = [
+            'W' => $cx - $bbox['minX'],
+            'E' => $bbox['maxX'] - $cx,
+            'N' => $cy - $bbox['minY'],
+            'S' => $bbox['maxY'] - $cy,
+        ];
+
+        // sort candidates by nearest edge, then tie priority
+        $dirs = array_keys($dists);
+        usort($dirs, function($a, $b) use ($dists, $tieOrder) {
+            $cmp = $dists[$a] <=> $dists[$b];
+            if ($cmp !== 0) return $cmp;
+            return array_search($a, $tieOrder) <=> array_search($b, $tieOrder);
+        });
+
+        // test candidates with corridor-based blocking up to 'reach'
+        $chosen = $dirs[0];
+        foreach ($dirs as $dir) {
+            if (!path_blocked_corridor($pos, $dir, $reach, $pinCenters, $corrHalf)) {
+                $chosen = $dir;
+                break;
+            }
+        }
+        $out[$id] = $chosen;
+    }
+    return $out;
+}
+
+function expand_svg_canvas_string(string $svgContent, array $bbox, float $padX, float $padY): string {
+    $dom = new DOMDocument();
+    libxml_use_internal_errors(true);
+    $dom->loadXML($svgContent);
+    libxml_clear_errors();
+
+    $svg = $dom->documentElement;
+    if (!$svg || $svg->tagName !== 'svg') return $svgContent;
+
+    $viewBox = trim($svg->getAttribute('viewBox'));
+
+    if ($viewBox !== '') {
+        $parts = preg_split('/\s+/', $viewBox);
+        if (count($parts) === 4) {
+            // Save original VB + pad as data- attrs
+            $svg->setAttribute('data-orig-vbx', $parts[0]);
+            $svg->setAttribute('data-orig-vby', $parts[1]);
+            $svg->setAttribute('data-orig-vbw', $parts[2]);
+            $svg->setAttribute('data-orig-vbh', $parts[3]);
+            $svg->setAttribute('data-padx', $padX);
+            $svg->setAttribute('data-pady', $padY);
+
+            $x0 = (float)$parts[0] - $padX;
+            $y0 = (float)$parts[1] - $padY;
+            $w  = (float)$parts[2] + 2*$padX;
+            $h  = (float)$parts[3] + 2*$padY;
+            $svg->setAttribute('viewBox', "$x0 $y0 $w $h");
+        }
+    } else {
+        // Fallback: derive from bbox
+        $minX = $bbox['minX'] ?? 0;
+        $minY = $bbox['minY'] ?? 0;
+        $w    = $bbox['width'] ?? 1000;
+        $h    = $bbox['height'] ?? 1000;
+
+        $svg->setAttribute('data-orig-vbx', $minX);
+        $svg->setAttribute('data-orig-vby', $minY);
+        $svg->setAttribute('data-orig-vbw', $w);
+        $svg->setAttribute('data-orig-vbh', $h);
+        $svg->setAttribute('data-padx', $padX);
+        $svg->setAttribute('data-pady', $padY);
+
+        $svg->setAttribute('viewBox', ($minX - $padX) . ' ' . ($minY - $padY) . ' ' . ($w + 2*$padX) . ' ' . ($h + 2*$padY));
+    }
+
+    // Ensure nothing clips
+    $svg->setAttribute('overflow', 'visible');
+    $svg->setAttribute('style', trim($svg->getAttribute('style') . '; overflow:visible;'));
+
+    return $dom->saveXML();
+}
+
+function compute_pin_directions_and_edge_dists(array $pinCenters, array $bbox, float $eps = 1.0): array {
+    $out = [];
+    $tieOrder = ['N','S','E','W']; // tie-priority for equal distances
+
+    foreach ($pinCenters as $id => $pos) {
+        $cx = $pos['x']; $cy = $pos['y'];
+
+        $dists = [
+            'W' => $cx - $bbox['minX'],
+            'E' => $bbox['maxX'] - $cx,
+            'N' => $cy - $bbox['minY'],
+            'S' => $bbox['maxY'] - $cy,
+        ];
+
+        // sort by distance asc, then by tieOrder
+        $dirs = array_keys($dists);
+        usort($dirs, function($a, $b) use ($dists, $tieOrder) {
+            $cmp = $dists[$a] <=> $dists[$b];
+            if ($cmp !== 0) return $cmp;
+            return array_search($a, $tieOrder) <=> array_search($b, $tieOrder);
+        });
+
+        // choose nearest edge that is not blocked
+        $chosenDir = $dirs[0];
+        foreach ($dirs as $dir) {
+            $edge = ($dir === 'E') ? $bbox['maxX'] :
+                    (($dir === 'W') ? $bbox['minX'] :
+                    (($dir === 'S') ? $bbox['maxY'] : $bbox['minY']));
+            if (!path_blocked($pos, $dir, $edge, $pinCenters, $eps)) {
+                $chosenDir = $dir;
+                break;
+            }
+        }
+
+        // save direction + raw distance to that edge (no overshoot, no fixed length)
+        $edgeDist = $dists[$chosenDir];
+        $out[$id] = ['dir' => $chosenDir, 'edgeDist' => $edgeDist];
+    }
+
+    return $out;
+}
+
+
+/**
+ * For every pin center, pick NESW direction to the nearest edge, avoiding overlaps.
+ * Returns array[id] = ['dir' => 'N|E|S|W', 'len' => float].
+ * len is the distance to that edge + overshoot (so rectangle head goes past the bbox).
+ */
+function compute_pin_directions_and_lengths(array $pinCenters, array $bbox, float $eps = 1.0, float $overshoot = null): array {
+    if ($overshoot === null) {
+        // Overshoot ~ 1.5% of the larger side, min 6 pixels
+        $overshoot = max(6.0, 0.015 * max($bbox['width'], $bbox['height']));
+    }
+    $out = [];
+
+    // Priority when distances are equal: N, S, E, W
+    $tieOrder = ['N','S','E','W'];
+
+    foreach ($pinCenters as $id => $pos) {
+        $cx = $pos['x']; $cy = $pos['y'];
+        $dists = [
+            'W' => $cx - $bbox['minX'],
+            'E' => $bbox['maxX'] - $cx,
+            'N' => $cy - $bbox['minY'],
+            'S' => $bbox['maxY'] - $cy,
+        ];
+
+        // Sort by distance asc, and apply tie priority N,S,E,W
+        $dirs = array_keys($dists);
+        usort($dirs, function($a, $b) use ($dists, $tieOrder) {
+            $cmp = $dists[$a] <=> $dists[$b];
+            if ($cmp !== 0) return $cmp;
+            return array_search($a, $tieOrder) <=> array_search($b, $tieOrder);
+        });
+
+        $chosenDir = 'E'; $len = 0; $found = false;
+
+        foreach ($dirs as $dir) {
+            switch ($dir) {
+                case 'E':
+                    $edge = $bbox['maxX'];
+                    if (!path_blocked($pos, 'E', $edge, $pinCenters, $eps)) {
+                        $chosenDir = 'E'; $len = ($edge - $cx) + $overshoot; $found = true;
+                    }
+                    break;
+                case 'W':
+                    $edge = $bbox['minX'];
+                    if (!path_blocked($pos, 'W', $edge, $pinCenters, $eps)) {
+                        $chosenDir = 'W'; $len = ($cx - $edge) + $overshoot; $found = true;
+                    }
+                    break;
+                case 'S':
+                    $edge = $bbox['maxY'];
+                    if (!path_blocked($pos, 'S', $edge, $pinCenters, $eps)) {
+                        $chosenDir = 'S'; $len = ($edge - $cy) + $overshoot; $found = true;
+                    }
+                    break;
+                case 'N':
+                    $edge = $bbox['minY'];
+                    if (!path_blocked($pos, 'N', $edge, $pinCenters, $eps)) {
+                        $chosenDir = 'N'; $len = ($cy - $edge) + $overshoot; $found = true;
+                    }
+                    break;
+            }
+            if ($found) break;
+        }
+
+        // Fallback: if everything blocked (unlikely), take absolute nearest with overshoot
+        if (!$found) {
+            asort($dists);
+            $fallbackDir = array_key_first($dists);
+            $chosenDir = $fallbackDir;
+            if ($fallbackDir === 'E') $len = ($bbox['maxX'] - $cx) + $overshoot;
+            elseif ($fallbackDir === 'W') $len = ($cx - $bbox['minX']) + $overshoot;
+            elseif ($fallbackDir === 'S') $len = ($bbox['maxY'] - $cy) + $overshoot;
+            else $len = ($cy - $bbox['minY']) + $overshoot; // 'N'
+        }
+
+        $out[$id] = ['dir' => $chosenDir, 'len' => $len];
+    }
+
+    return $out;
+}
+
+/**
+ * Draws a clickable <rect> per pin toward its chosen edge.
+ * Keeps original pin shapes; overlays colored rectangles on top and makes them clickable.
+ */
+function draw_clickable_direction_rects_fixed(string $svgContent, array $pins, array $pinCenters, array $dirEdge, float $Lfixed): string {
+    $dom = new DOMDocument();
+    libxml_use_internal_errors(true);
+    $dom->loadXML($svgContent);
+    libxml_clear_errors();
+
+    $svg = $dom->documentElement;
+    if (!$svg || $svg->tagName !== 'svg') return $svgContent;
+
+    $bbox = build_pin_bbox($pinCenters);
+
+    // Thickness ~1.2% of larger side
+    $thick = max(2.0, 0.012 * max($bbox['width'], $bbox['height']));
+
+    // Ensure a style
+    $style = $dom->createElement('style');
+    $style->textContent = '.pin-rect { cursor:pointer; pointer-events:all; transition:opacity .15s ease; } .pin-rect:hover { opacity:.85; }';
+    $svg->insertBefore($style, $svg->firstChild);
+
+    // Compute padding needed so overshoot is visible for *fixed* length
+    $leftPad = $rightPad = $topPad = $bottomPad = 0.0;
+    foreach ($pinCenters as $id => $pos) {
+        if (!isset($dirEdge[$id])) continue;
+        $dir = $dirEdge[$id]['dir'];
+        $edgeDist = $dirEdge[$id]['edgeDist'];
+        $extra = $Lfixed - $edgeDist; // how far beyond the edge this fixed bar goes
+
+        if ($dir === 'W')       $leftPad   = max($leftPad,   $extra);
+        elseif ($dir === 'E')  $rightPad  = max($rightPad,  $extra);
+        elseif ($dir === 'N')  $topPad    = max($topPad,    $extra);
+        elseif ($dir === 'S')  $bottomPad = max($bottomPad, $extra);
+    }
+    // (Padding actually matters if you also enlarge the root viewBox or outer container. If your viewer handles overflow, you can skip adjusting the SVG size.)
+
+    // Draw bars
+    foreach ($pins as $p) {
+        $id = $p['svgId'] ?? null;
+        if (!$id || !isset($pinCenters[$id]) || !isset($dirEdge[$id])) continue;
+
+        $cx = $pinCenters[$id]['x'];
+        $cy = $pinCenters[$id]['y'];
+        $dir = $dirEdge[$id]['dir'];
+
+        $pinName   = $p['pin_name']   ?? $id;
+        $groupName = $p['group_name'] ?? 'Other';
+        $fillColor   = getPinColor($pinName);
+        $strokeColor = getPinStrokeColor($pinName, $groupName);
+
+        $rect = $dom->createElement('rect');
+        $rect->setAttribute('class', 'pin-rect');
+        $rect->setAttribute('fill', $fillColor);
+        $rect->setAttribute('stroke', $strokeColor);
+        $rect->setAttribute('stroke-width', '1.5');
+        $rect->setAttribute('data-pin', $pinName);
+        $rect->setAttribute('data-group', $groupName);
+        $rect->setAttribute('data-svgid', $id);
+
+        // Place a bar of *fixed length* Lfixed
+        if ($dir === 'E' || $dir === 'W') {
+            $w = $Lfixed; $h = $thick;
+            $x = ($dir === 'E') ? $cx : ($cx - $Lfixed);
+            $y = $cy - $h / 2.0;
+            $rect->setAttribute('x', (string)$x);
+            $rect->setAttribute('y', (string)$y);
+            $rect->setAttribute('width', (string)$w);
+            $rect->setAttribute('height', (string)$h);
+        } else { // N/S
+            $w = $thick; $h = $Lfixed;
+            $x = $cx - $w / 2.0;
+            $y = ($dir === 'S') ? $cy : ($cy - $Lfixed);
+            $rect->setAttribute('x', (string)$x);
+            $rect->setAttribute('y', (string)$y);
+            $rect->setAttribute('width', (string)$w);
+            $rect->setAttribute('height', (string)$h);
+        }
+
+        $title = $dom->createElement('title', $pinName . ' (' . $groupName . ')');
+        $rect->appendChild($title);
+        $svg->appendChild($rect);
+    }
+
+    return $dom->saveXML();
+}
+
+
+function replacePathWithDirectionalPins($svgContent, $pins = []) {
+    $dom = new DOMDocument();
+    libxml_use_internal_errors(true);
+    $dom->loadXML($svgContent);
+    libxml_clear_errors();
+
+    $xpath = new DOMXPath($dom);
+    $svgElement = $dom->documentElement;
+
+    // Some SVGs define pins inside <g> wrappers like <g id="connector29pin_2_"><path .../></g>
+    $connectorGroups = $xpath->query('//*[starts-with(@id, "connector") and contains(@id, "pin")]');
+    foreach ($connectorGroups as $group) {
+        $groupId = $group->getAttribute('id');
+        $childPaths = $group->getElementsByTagName('path');
+        foreach ($childPaths as $childPath) {
+            if ($childPath->hasAttribute('d')) {
+                $childPath->setAttribute('id', $groupId); // copy group ID into actual path
+                $group->removeAttribute('id'); 
+                error_log("🌀 Tagged nested path inside <g id='{$groupId}'>");
+                break; // only first relevant path
+            }
+        }
+    }
+
+    // Try to get dimensions
+    $viewBox = $svgElement->getAttribute('viewBox');
+    $width = 0; $height = 0;
+
+    if ($viewBox) {
+        $parts = preg_split('/\s+/', trim($viewBox));
+        if (count($parts) === 4) {
+            $width = floatval($parts[2]);
+            $height = floatval($parts[3]);
+        }
+    }
+
+    // If no viewBox or too small, fallback to pin bounding box
+    if ($width < 10 || $height < 10) {
+        $paths = $xpath->query('//*[local-name()="path" and @d]');
+        $minX = $minY = PHP_FLOAT_MAX;
+        $maxX = $maxY = PHP_FLOAT_MIN;
+
+        foreach ($paths as $p) {
+            $id = $p->getAttribute('id');
+            if (!preg_match('/^(connector\d+pin|pin[_\d]*)$/i', $id)) continue;
+            $circle = extractPathCenterAndRadius($p->getAttribute('d'));
+            if (!$circle) continue;
+
+            $cx = $circle['cx']; $cy = $circle['cy']; $r = $circle['r'];
+            $minX = min($minX, $cx - $r);
+            $maxX = max($maxX, $cx + $r);
+            $minY = min($minY, $cy - $r);
+            $maxY = max($maxY, $cy + $r);
+        }
+
+        if ($minX < PHP_FLOAT_MAX && $maxX > PHP_FLOAT_MIN) {
+            $width = $maxX - $minX;
+            $height = $maxY - $minY;
+        } else {
+            // Fallback if no pins found
+            $width = 1000;
+            $height = 1000;
+        }
+
+        error_log("⚠️ Estimated SVG size from pin bounds: width={$width}, height={$height}");
+    } else {
+        error_log("✅ Using viewBox size: width={$width}, height={$height}");
+    }
+
+    $paths = $xpath->query('//*[local-name()="path" and @d]');
+    $maxCoord = 0;
+    foreach ($paths as $p) {
+        if (!preg_match('/^(connector\d+pin|pin[_\d]*)$/i', $p->getAttribute('id'))) continue;
+        $circle = extractPathCenterAndRadius($p->getAttribute('d'));
+        if (!$circle) continue;
+        $maxCoord = max($maxCoord, $circle['cx'], $circle['cy']);
+    }
+
+    $scaleFactor = 1.0;
+    if ($maxCoord > 0 && $width > 0 && $maxCoord / $width > 5) {
+        $scaleFactor = $width / $maxCoord;
+        error_log("⚠️ Coordinate scale mismatch detected — applying scaleFactor={$scaleFactor}");
+    }
+    $replacedCount = 0;
+
+    foreach ($paths as $path) {
+        $id = $path->getAttribute('id');
+        $d = $path->getAttribute('d');
+
+        if (!preg_match('/^(connector\d+pin|pin[_\d]*)$/i', $id)) continue;
+
+        $fillAttr = strtolower($path->getAttribute('fill'));
+        if ($fillAttr && $fillAttr !== 'none' && strpos($fillAttr, '#aaaaaa') !== false) continue;
+
+        $circle = extractPathCenterAndRadius($d);
+        if (!$circle || $circle['r'] <= 0) continue;
+
+        $cx = $circle['cx'] * $scaleFactor;
+        $cy = $circle['cy'] * $scaleFactor;
+        $r  = $circle['r'] * $scaleFactor;
+        $r  = min($r, $width * 0.1); 
+
+        // Match pin name
+        $pinName = '';
+        $groupName = '';
+        foreach ($pins as $p) {
+            if (($p['svgId'] ?? '') === $id) {
+                $pinName = $p['pin_name'] ?? '';
+                $groupName = $p['group_name'] ?? '';
+                break;
+            }
+        }
+        if ($pinName === '' && preg_match('/connector(\d+)/', $id, $m)) $pinName = 'P' . $m[1];
+
+        // Determine side from true width/height
+        $side = 'left';
+        if ($cx < $width * 0.25) $side = 'right';
+        elseif ($cx > $width * 0.75) $side = 'left';
+        elseif ($cy < $height * 0.25) $side = 'top';
+        elseif ($cy > $height * 0.75) $side = 'bottom';
+
+        $fillColor = getPinColor($pinName);
+        $strokeColor = getPinStrokeColor($pinName, $groupName);
+        $textColor = (strpos($fillColor, '0, 0, 0') !== false) ? '#fff' : '#000';
+
+        $rectLength = $r * 7.5;
+        $r = max(3, $r); // avoid absurdly large shapes if r was miscalculated
+
+        // Build half-circle + rectangle
+        switch ($side) {
+            case 'left':
+                $pathData = sprintf(
+                    "M %f,%f A %f,%f 0 0 0 %f,%f L %f,%f L %f,%f Z",
+                    $cx, $cy - $r, $r, $r,
+                    $cx, $cy + $r,
+                    $cx + $rectLength, $cy + $r,
+                    $cx + $rectLength, $cy - $r
+                );
+                break;
+            case 'right':
+                $pathData = sprintf(
+                    "M %f,%f A %f,%f 0 0 1 %f,%f L %f,%f L %f,%f Z",
+                    $cx, $cy - $r, $r, $r,
+                    $cx, $cy + $r,
+                    $cx - $rectLength, $cy + $r,
+                    $cx - $rectLength, $cy - $r
+                );
+                break;
+            case 'top':
+                $pathData = sprintf(
+                    "M %f,%f A %f,%f 0 0 0 %f,%f L %f,%f L %f,%f Z",
+                    $cx - $r, $cy, $r, $r,
+                    $cx + $r, $cy,
+                    $cx + $r, $cy + $rectLength,
+                    $cx - $r, $cy + $rectLength
+                );
+                break;
+            case 'bottom':
+                $pathData = sprintf(
+                    "M %f,%f A %f,%f 0 0 1 %f,%f L %f,%f L %f,%f Z",
+                    $cx - $r, $cy, $r, $r,
+                    $cx + $r, $cy,
+                    $cx + $r, $cy - $rectLength,
+                    $cx - $r, $cy - $rectLength
+                );
+                break;
+        }
+
+        $newPath = $dom->createElement('path');
+        $newPath->setAttribute('d', $pathData);
+        $newPath->setAttribute('id', $id);
+        $newPath->setAttribute('fill', $fillColor);
+        $newPath->setAttribute('stroke', $strokeColor);
+        $newPath->setAttribute('stroke-width', '2');
+        $newPath->setAttribute('cursor', 'pointer');
+        $path->parentNode->replaceChild($newPath, $path);
+
+        // Add text label (visible)
+        $text = $dom->createElement('text', htmlspecialchars($pinName));
+        $text->setAttribute('font-size', max(6, $r * 0.9));
+        $text->setAttribute('font-family', 'Arial, sans-serif');
+        $text->setAttribute('fill', $textColor);
+        $text->setAttribute('text-anchor', 'middle');
+        $text->setAttribute('dominant-baseline', 'middle');
+
+        switch ($side) {
+            case 'left':
+                $text->setAttribute('x', $cx + $rectLength / 2);
+                $text->setAttribute('y', $cy);
+                break;
+            case 'right':
+                $text->setAttribute('x', $cx - $rectLength / 2);
+                $text->setAttribute('y', $cy);
+                break;
+            case 'top':
+                $text->setAttribute('x', $cx);
+                $text->setAttribute('y', $cy + $rectLength / 2);
+                break;
+            case 'bottom':
+                $text->setAttribute('x', $cx);
+                $text->setAttribute('y', $cy - $rectLength / 2);
+                break;
+        }
+
+        $svgElement->appendChild($text);
+        error_log("✅ Replaced {$id} (cx={$cx}, cy={$cy}, r={$r}) side={$side}");
+        $replacedCount++;
+    }
+
+    error_log("✅ Total directional pin replacements with colors: {$replacedCount}");
+    return $dom->saveXML();
+}
+
+
+
+
+function replacePathWithHalfCircleRect($svgContent) {
+    $dom = new DOMDocument();
+    libxml_use_internal_errors(true);
+    $dom->loadXML($svgContent);
+    libxml_clear_errors();
+
+    $xpath = new DOMXPath($dom);
+
+    // Namespace-safe path search
+    $paths = $xpath->query('//*[local-name()="path" and @d]');
+    $replacedCount = 0;
+
+    foreach ($paths as $path) {
+        $id = $path->getAttribute('id');
+        $d = $path->getAttribute('d');
+
+        // Log each path for debugging
+        error_log("Scanning path id={$id}");
+
+        // Only modify connector pin paths
+        if (!preg_match('/^(connector\d+pin|pin[_\d]*)$/i', $id)) continue;
+
+        $circle = extractPathCenterAndRadius($d);
+        if (!$circle || $circle['r'] <= 0) continue;
+
+        $cx = $circle['cx'];
+        $cy = $circle['cy'];
+        $r  = $circle['r'];
+
+        // Compute half-circle + rectangle shape (Norman window)
+        // Top half is an arc; bottom is rectangular
+        $x1 = $cx - $r;
+        $x2 = $cx + $r;
+        $yTop = $cy - $r;
+        $yBottom = $cy + $r * 0.8; // rectangle height relative to radius
+
+        // Build SVG path for half-circle + rectangle
+        $pathData = sprintf(
+            "M %f,%f A %f,%f 0 0 1 %f,%f L %f,%f L %f,%f Z",
+            $x1, $cy,     // Start left of center
+            $r, $r,       // Arc radii
+            $x2, $cy,     // End of arc
+            $x2, $yBottom, // Right-bottom corner
+            $x1, $yBottom, // Left-bottom corner
+            $x1, $cy       // Back to start
+        );
+
+        // Create new <path> element
+        $newPath = $dom->createElement('path');
+        $newPath->setAttribute('d', $pathData);
+        if ($id) $newPath->setAttribute('id', $id);
+
+        // Copy style attributes
+        foreach (['fill', 'stroke', 'stroke-width', 'style', 'class'] as $attr) {
+            if ($path->hasAttribute($attr)) {
+                $newPath->setAttribute($attr, $path->getAttribute($attr));
+            }
+        }
+
+        // Replace the old path with new shape
+        $path->parentNode->replaceChild($newPath, $path);
+        $replacedCount++;
+
+        error_log("✅ Replaced '{$id}' with half-circle+rect (cx={$cx}, cy={$cy}, r={$r})");
+    }
+
+    if ($replacedCount === 0) {
+        error_log("⚠️ No pin paths replaced with half-circle+rect.");
+    } else {
+        error_log("✅ Total half-circle replacements: {$replacedCount}");
+    }
+
+    return $dom->saveXML();
+}
+
+function replacePathCirclesWithCircles($svgContent) {
+    $dom = new DOMDocument();
+    libxml_use_internal_errors(true);
+    $dom->loadXML($svgContent);
+    libxml_clear_errors();
+
+    $xpath = new DOMXPath($dom);
+
+    // Namespace-safe search for <path> elements with a "d" attribute
+    $paths = $xpath->query('//*[local-name()="path" and @d]');
+
+    $replacedCount = 0;
+
+    foreach ($paths as $path) {
+        $id = $path->getAttribute('id');
+        $d = $path->getAttribute('d');
+
+        // Log every scanned path
+        error_log("Scanning path id={$id}");
+
+        // Only process likely pin IDs
+        if (!preg_match('/^(connector\d+pin|pin[_\d]*)$/i', $id)) {
+            continue;
+        }
+
+        $circle = extractPathCenterAndRadius($d);
+        if (!$circle || $circle['r'] <= 0) continue;
+
+        $circleElement = $dom->createElement('circle');
+        $circleElement->setAttribute('cx', $circle['cx']);
+        $circleElement->setAttribute('cy', $circle['cy']);
+        $circleElement->setAttribute('r', $circle['r']);
+
+        // Copy attributes for styling consistency
+        foreach (['fill', 'stroke', 'stroke-width', 'style', 'class'] as $attr) {
+            if ($path->hasAttribute($attr)) {
+                $circleElement->setAttribute($attr, $path->getAttribute($attr));
+            }
+        }
+
+        // Retain the same ID
+        if ($id) $circleElement->setAttribute('id', $id);
+
+        $path->parentNode->replaceChild($circleElement, $path);
+        $replacedCount++;
+
+        error_log("Replaced pin path '{$id}' with <circle> (cx={$circle['cx']}, cy={$circle['cy']}, r={$circle['r']})");
+    }
+
+    if ($replacedCount === 0) {
+        error_log("No pin paths replaced — possibly due to namespace or ID mismatch.");
+    } else {
+        error_log("Total paths replaced: {$replacedCount}");
+    }
+
+    return $dom->saveXML();
+}
+
+/**
+ * Extract pin centers from SVG (handles circles, rects, and paths)
+ */
+function extract_pin_centers($svgContent, $pinIds = []) {
+    $dom = new DOMDocument();
+    @$dom->loadXML($svgContent);
+    $xpath = new DOMXPath($dom);
+
+    $coordinates = [];
+
+    foreach ($pinIds as $pin) {
+        // Support both ['svgId'=>...] and "connectorXpin" formats
+        $id = is_array($pin) && isset($pin['svgId']) ? $pin['svgId'] : (is_string($pin) ? $pin : null);
+        if (!$id) {
+            error_log("⚠️ Skipping invalid pin entry: " . print_r($pin, true));
+            continue;
+        }
+
+        // Find the element by ID (direct or nested)
+        $element = $xpath->query("//*[@id='$id']")->item(0);
+        if (!$element) $element = $xpath->query("//*[contains(@id, '$id')]")->item(0);
+        if (!$element) {
+            error_log("❌ No element found for ID: $id");
+            continue;
+        }
+
+        $cx = $cy = null;
+        $tag = $element->tagName;
+
+        // --- Case 1: explicit <circle> or <rect> tags ---
+        if ($tag === 'circle') {
+            $cx = floatval($element->getAttribute('cx'));
+            $cy = floatval($element->getAttribute('cy'));
+            error_log("⭕ Circle pin $id => ($cx,$cy)");
+        } elseif ($tag === 'rect') {
+            $x = floatval($element->getAttribute('x'));
+            $y = floatval($element->getAttribute('y'));
+            $w = floatval($element->getAttribute('width'));
+            $h = floatval($element->getAttribute('height'));
+            $cx = $x + $w / 2;
+            $cy = $y + $h / 2;
+            error_log("⬛ Rect pin $id => ($cx,$cy)");
+        }
+
+        // --- Case 2: path-based pins ---
+        elseif ($element->hasAttribute('d')) {
+            $d = $element->getAttribute('d');
+
+            // Collect all coordinate pairs in path
+            if (preg_match_all('/([0-9\.\-]+),\s*([0-9\.\-]+)/', $d, $coords)) {
+                $xs = array_map('floatval', $coords[1]);
+                $ys = array_map('floatval', $coords[2]);
+
+                if (strpos($d, 'v') !== false || strpos($d, 'h') !== false) {
+                    // Likely rectangular
+                    $cx = (min($xs) + max($xs)) / 2;
+                    $cy = (min($ys) + max($ys)) / 2;
+                    error_log("⬜ Rectangular path $id => ($cx,$cy)");
+                } else {
+                    // Circular (two M commands)
+                    if (preg_match_all('/M\s*([0-9\.\-]+),\s*([0-9\.\-]+)/i', $d, $mcoords)) {
+                        $cx = array_sum(array_map('floatval', $mcoords[1])) / count($mcoords[1]);
+                        $cy = array_sum(array_map('floatval', $mcoords[2])) / count($mcoords[2]);
+                        error_log("🎯 Circular path $id => ($cx,$cy)");
+                    } else {
+                        // Fallback: bounding box
+                        $cx = (min($xs) + max($xs)) / 2;
+                        $cy = (min($ys) + max($ys)) / 2;
+                        error_log("📏 Fallback bbox for $id => ($cx,$cy)");
+                    }
+                }
+            }
+        }
+
+        if ($cx !== null && $cy !== null)
+            $coordinates[$id] = ['x' => $cx, 'y' => $cy];
+    }
+
+    error_log("✅ After coordinate extraction: " . count($coordinates) . " pins processed");
+    return $coordinates;
+}
+
+
+/**
+ * Replace pins with half-circle + rectangle shapes centered at detected coordinates
+ */
+function replace_pins_with_shapes($svgContent, $pinCenters, $pinSides, $radius = 3) {
+    foreach ($pinCenters as $id => $pos) {
+        $cx = $pos['x'];
+        $cy = $pos['y'];
+        $side = isset($pinSides[$id]) ? $pinSides[$id] : 'left';
+        $rectLen = $radius * 7.5;  // adjust rectangle length
+
+        // Build half-circle + rectangle path ("Norman window" style)
+        switch ($side) {
+            case 'right':
+                $path = "M $cx,$cy a$radius,$radius 0 1,0 0.01,0 z 
+                         M $cx,$cy h$rectLen v" . ($radius * 1.5) . " h-" . $rectLen . " z";
+                break;
+            case 'left':
+                $path = "M $cx,$cy a$radius,$radius 0 1,1 -0.01,0 z 
+                         M $cx,$cy h-" . $rectLen . " v" . ($radius * 1.5) . " h$rectLen z";
+                break;
+            case 'top':
+                $path = "M $cx,$cy a$radius,$radius 0 1,1 0,-0.01 z 
+                         M $cx,$cy v-" . $rectLen . " h" . ($radius * 1.5) . " v$rectLen z";
+                break;
+            case 'bottom':
+                $path = "M $cx,$cy a$radius,$radius 0 1,0 0.01,0 z 
+                         M $cx,$cy v$rectLen h" . ($radius * 1.5) . " v-" . $rectLen . " z";
+                break;
+        }
+
+        $svgContent = preg_replace(
+            '/(<path[^>]*id="' . preg_quote($id, '/') . '"[^>]*d=")[^"]*(")/',
+            '$1' . trim($path) . '$2',
+            $svgContent
+        );
+
+        error_log("✅ Replaced $id @ ($cx,$cy) → side=$side");
+    }
+
+    return $svgContent;
+}
+
+
+function extractCoordinatesFromSVG($svgContent, $pinIds = []) {
+    $dom = new DOMDocument();
+    @$dom->loadXML($svgContent);
+    $xpath = new DOMXPath($dom);
+
+    $svgRoot = $dom->documentElement;
+    $viewBox = $svgRoot->getAttribute('viewBox');
+    if ($viewBox) {
+        $parts = preg_split('/\s+/', trim($viewBox));
+        $viewBoxWidth = floatval($parts[2]);
+        $viewBoxHeight = floatval($parts[3]);
+        error_log("✅ Using viewBox size: width=$viewBoxWidth, height=$viewBoxHeight");
+    }
+
+    $coordinates = [];
+
+    foreach ($pinIds as $pin) {
+        $id = $pin['svgId'];
+        $element = $xpath->query("//*[@id='$id']")->item(0);
+
+        // fallback for nested <g> groups
+        if (!$element) {
+            $element = $xpath->query("//*[contains(@id, '$id')]")->item(0);
+        }
+
+        if (!$element) {
+            error_log("⚠️ Pin $id not found in SVG");
+            continue;
+        }
+
+        // Extract coordinates depending on tag
+        $tag = $element->tagName;
+        $pathData = '';
+
+        if ($tag === 'circle') {
+            $cx = floatval($element->getAttribute('cx'));
+            $cy = floatval($element->getAttribute('cy'));
+            $coordinates[$id] = ['x' => $cx, 'y' => $cy];
+            error_log("✅ Using <circle> center for $id: x=$cx, y=$cy");
+        } 
+        elseif ($tag === 'path' || $element->hasAttribute('d')) {
+            $pathData = $element->getAttribute('d');
+
+            // Extract all "M x,y" pairs
+            if (preg_match_all('/M\s*([0-9\.\-]+),\s*([0-9\.\-]+)/i', $pathData, $matches)) {
+                $sumX = 0;
+                $sumY = 0;
+                $count = count($matches[1]);
+                for ($i = 0; $i < $count; $i++) {
+                    $sumX += floatval($matches[1][$i]);
+                    $sumY += floatval($matches[2][$i]);
+                }
+                $cx = $sumX / $count;
+                $cy = $sumY / $count;
+                $coordinates[$id] = ['x' => $cx, 'y' => $cy];
+                error_log("🎯 Averaged center from M-points for $id: x=$cx, y=$cy");
+            } else {
+                error_log("⚠️ No 'M' coordinates found for $id");
+            }
+        }
+    }
+
+    return $coordinates;
+}
+
+function replace_pins_with_norman_shapes($svgContent, $pins, $pinCenters, $svgWidth = 1000, $svgHeight = 1000) {
+    $dom = new DOMDocument();
+    libxml_use_internal_errors(true);
+    $dom->loadXML($svgContent);
+    libxml_clear_errors();
+
+    $svg = $dom->documentElement;
+    $xpath = new DOMXPath($dom);
+
+    if (empty($pinCenters)) {
+        error_log("⚠️ No pin centers found — skipping Norman shape replacement.");
+        return $svgContent;
+    }
+
+    // --- Compute bounding box for all pins ---
+    $xs = array_column($pinCenters, 'x');
+    $ys = array_column($pinCenters, 'y');
+    $minX = min($xs); $maxX = max($xs);
+    $minY = min($ys); $maxY = max($ys);
+    $midX = ($minX + $maxX) / 2;
+    error_log("📏 Pin bounding box: minX=$minX, maxX=$maxX, minY=$minY, maxY=$maxY");
+
+    $replacedCount = 0;
+
+    foreach ($pinCenters as $id => $pos) {
+        $cx = $pos['x'];
+        $cy = $pos['y'];
+
+        // --- Find matching pin info ---
+        $pinName = '';
+        $groupName = '';
+        $fillColor = 'rgba(150,150,150,0.4)';
+        $strokeColor = '#000';
+        foreach ($pins as $p) {
+            if (($p['svgId'] ?? '') === $id) {
+                $pinName = $p['pin_name'] ?? '';
+                $groupName = $p['group_name'] ?? '';
+                $fillColor = getPinColor($pinName);
+                $strokeColor = getPinStrokeColor($pinName, $groupName);
+                break;
+            }
+        }
+
+        // --- Smarter side detection ---
+        $distances = [
+            'left'   => abs($cx - $minX),
+            'right'  => abs($maxX - $cx),
+            'top'    => abs($cy - $minY),
+            'bottom' => abs($maxY - $cy)
+        ];
+        asort($distances);
+        $side = key($distances);
+
+        // --- ICSP correction: detect middle two-column group ---
+        $horizontalSpan = $maxX - $minX;
+        if ($horizontalSpan > 0) {
+            $relativeX = ($cx - $minX) / $horizontalSpan; // normalized 0..1
+            if ($relativeX > 0.4 && $relativeX < 0.6) {
+                // likely middle cluster (like ICSP)
+                // determine left or right sub-column by comparing to midline
+                if ($cx < $midX) $side = 'left';
+                else $side = 'right';
+            }
+        }
+
+        // --- Find existing element ---
+        $element = $xpath->query("//*[@id='$id']")->item(0);
+        if (!$element) continue;
+
+        // --- Determine approximate pin radius ---
+        $r = 3;
+        if ($element->tagName === 'circle') {
+            $r = max(3, floatval($element->getAttribute('r')));
+        } elseif ($element->tagName === 'rect') {
+            $w = floatval($element->getAttribute('width'));
+            $h = floatval($element->getAttribute('height'));
+            $r = max(3, min($w, $h) / 2);
+        }
+
+        $rectLen = $r * 7.5;
+
+        // --- Build half-circle + rectangle shape (Norman window) ---
+        switch ($side) {
+            case 'left': // reversed direction from before
+                $pathData = sprintf(
+                    "M %f,%f A %f,%f 0 0 1 %f,%f L %f,%f L %f,%f Z",
+                    $cx, $cy - $r, $r, $r,
+                    $cx, $cy + $r,
+                    $cx - $rectLen, $cy + $r,
+                    $cx - $rectLen, $cy - $r
+                );
+                break;
+
+            case 'right': // reversed direction from before
+                $pathData = sprintf(
+                    "M %f,%f A %f,%f 0 0 0 %f,%f L %f,%f L %f,%f Z",
+                    $cx, $cy - $r, $r, $r,
+                    $cx, $cy + $r,
+                    $cx + $rectLen, $cy + $r,
+                    $cx + $rectLen, $cy - $r
+                );
+                break;
+
+            case 'top':
+                $pathData = sprintf(
+                    "M %f,%f A %f,%f 0 0 1 %f,%f L %f,%f L %f,%f Z",
+                    $cx - $r, $cy, $r, $r,
+                    $cx + $r, $cy,
+                    $cx + $r, $cy - $rectLen,
+                    $cx - $r, $cy - $rectLen
+                );
+                break;
+
+            case 'bottom':
+                $pathData = sprintf(
+                    "M %f,%f A %f,%f 0 0 0 %f,%f L %f,%f L %f,%f Z",
+                    $cx - $r, $cy, $r, $r,
+                    $cx + $r, $cy,
+                    $cx + $r, $cy + $rectLen,
+                    $cx - $r, $cy + $rectLen
+                );
+                break;
+
+            default:
+                // fallback circle
+                $pathData = sprintf(
+                    "M %f,%f m -%f,0 a %f,%f 0 1,0 %f,0 a %f,%f 0 1,0 -%f,0",
+                    $cx, $cy, $r, $r, $r, $r * 2, $r, $r, $r * 2
+                );
+                break;
+        }
+
+        // --- Replace original with new path ---
+        $newPath = $dom->createElement('path');
+        $newPath->setAttribute('id', $id);
+        $newPath->setAttribute('d', $pathData);
+        $newPath->setAttribute('fill', $fillColor); // ✅ fill color now visible
+        $newPath->setAttribute('stroke', $strokeColor);
+        $newPath->setAttribute('stroke-width', '1.5');
+        $newPath->setAttribute('cursor', 'pointer');
+
+        $element->parentNode->replaceChild($newPath, $element);
+
+        // --- Add pin label ---
+        $text = $dom->createElement('text', htmlspecialchars($pinName ?: $id));
+        $text->setAttribute('font-size', max(6, $r * 0.9));
+        $text->setAttribute('font-family', 'Arial, sans-serif');
+        $text->setAttribute('fill', '#000');
+        $text->setAttribute('text-anchor', 'middle');
+        $text->setAttribute('dominant-baseline', 'middle');
+
+        switch ($side) {
+            case 'left':
+                $text->setAttribute('x', $cx - $rectLen / 2);
+                $text->setAttribute('y', $cy);
+                break;
+            case 'right':
+                $text->setAttribute('x', $cx + $rectLen / 2);
+                $text->setAttribute('y', $cy);
+                break;
+            case 'top':
+                $text->setAttribute('x', $cx);
+                $text->setAttribute('y', $cy - $rectLen / 2);
+                break;
+            case 'bottom':
+                $text->setAttribute('x', $cx);
+                $text->setAttribute('y', $cy + $rectLen / 2);
+                break;
+        }
+
+        $svg->appendChild($text);
+
+        error_log("✅ Replaced $id @ ($cx,$cy,r=$r) side=$side fill=$fillColor");
+        $replacedCount++;
+    }
+
+    error_log("✅ Total Norman replacements: $replacedCount");
+    return $dom->saveXML();
+}
+
 
 function parseFritzingArchive($filePath) {
     // Check if ZIP extension is available
@@ -307,11 +1372,97 @@ function parseFritzingArchive($filePath) {
         
         // Extract coordinates from SVG file using the pin map
         if ($breadboardSvg && !empty($pins)) {
+            error_log("Converting pin paths to circles...");
+            //$breadboardSvg = replacePathCirclesWithCircles($breadboardSvg);
+            //$breadboardSvg = replacePathWithHalfCircleRect($breadboardSvg);
+            $breadboardSvg = replacePathWithDirectionalPins($breadboardSvg);
+
+            if (strpos($breadboardSvg, '<circle') !== false) {
+                error_log("Pin paths replaced with circles successfully.");
+            } else {
+                error_log("No <circle> elements found after conversion.");
+            }
             error_log("Extracting coordinates from SVG (length: " . strlen($breadboardSvg) . ") for " . count($pins) . " pins");
-            $pins = extractCoordinatesFromSVG($breadboardSvg, $pins);
+            //$pins = extractCoordinatesFromSVG($breadboardSvg, $pins);
+            $pinCenters = extract_pin_centers($breadboardSvg, $pins);
+            if (!empty($pinCenters)) {
+                $bbox = build_pin_bbox($pinCenters);
+                $Lfixed = 10.0; // or whatever you set elsewhere
+
+                $padX = $padY = $Lfixed; // allow overshoot = bar length on all sides
+                expand_svg_canvas_string($breadboardSvg, $bbox, $padX, $padY);
+                
+                // Corridor half-width: treat pins within this lateral band as "blocking".
+                // Start with ~2% of the larger side, but not smaller than 4px.
+                $corrHalf = max(4.0, 0.02 * max($bbox['width'], $bbox['height']));
+
+                // Choose directions using the corridor blocker and fixed length
+                $dirById = compute_pin_directions_fixed($pinCenters, $bbox, $Lfixed, $corrHalf);
+
+                // Draw bars of exactly Lfixed in the selected directions
+                // (drawer expects directions and bar length)
+                // If your drawer currently expects the older $dirEdge array: adapt to use $dirById
+                // Here is a small adapter:
+                $dirEdge = [];
+                foreach ($dirById as $id => $dir) {
+                    // we only need 'dir' for the fixed drawer; 'edgeDist' is unused
+                    $dirEdge[$id] = ['dir' => $dir, 'edgeDist' => 0];
+                }
+
+                $breadboardSvg = draw_clickable_direction_rects_fixed(
+                    $breadboardSvg, $pins, $pinCenters, $dirEdge, $Lfixed
+                );
+                    
+            }
+                                                
+/*             $svgWidth = 1000;
+            $svgHeight = 1000;
+
+            if ($breadboardSvg) {
+                $dom = new DOMDocument();
+                libxml_use_internal_errors(true);
+                $dom->loadXML($breadboardSvg);
+                libxml_clear_errors();
+
+                $svgEl = $dom->documentElement;
+                if ($svgEl && $svgEl->tagName === 'svg') {
+                    $viewBox = $svgEl->getAttribute('viewBox');
+                    if ($viewBox) {
+                        $parts = preg_split('/\s+/', trim($viewBox));
+                        if (count($parts) === 4) {
+                            $svgWidth = floatval($parts[2]);
+                            $svgHeight = floatval($parts[3]);
+                            error_log("✅ Extracted viewBox size: width={$svgWidth}, height={$svgHeight}");
+                        }
+                    } else {
+                        $w = $svgEl->getAttribute('width');
+                        $h = $svgEl->getAttribute('height');
+                        if ($w && $h) {
+                            $svgWidth = floatval(str_replace(['px', 'mm', 'cm'], '', $w));
+                            $svgHeight = floatval(str_replace(['px', 'mm', 'cm'], '', $h));
+                            error_log("✅ Extracted width/height attrs: width={$svgWidth}, height={$svgHeight}");
+                        }
+                    }
+                }
+            }
+            $breadboardSvg = replace_pins_with_norman_shapes($breadboardSvg, $pins, $pinCenters, $svgWidth, $svgHeight); */
             error_log("After coordinate extraction: " . count($pins) . " pins processed");
+
+            if (!empty($pins) && isset(reset($pins)['x'])) {
+                $normalizedPins = [];
+                foreach ($pins as $svgId => $coords) {
+                    $normalizedPins[] = [
+                        'svgId' => $svgId,
+                        'pin_name' => $pinMap[$svgId] ?? $svgId,
+                        'group_name' => determinePinGroup($pinMap[$svgId] ?? ''),
+                        'position_x' => $coords['x'],
+                        'position_y' => $coords['y']
+                    ];
+                }
+                $pins = $normalizedPins;
+            }
         } else {
-            error_log("Skipping coordinate extraction - breadboardSvg: " . (empty($breadboardSvg) ? 'empty' : 'present') . ", pins: " . count($pins));
+            error_log(message: "Skipping coordinate extraction - breadboardSvg: " . (empty($breadboardSvg) ? 'empty' : 'present') . ", pins: " . count($pins));
         }
     }
     
@@ -507,105 +1658,73 @@ function parseFZPContent($fzpContent) {
     ];
 }
 
-function extractCoordinatesFromSVG($svgContent, $pins) {
-    // Parse SVG content
-    $dom = new DOMDocument();
-    libxml_use_internal_errors(true);
-    $dom->loadXML($svgContent);
-    libxml_clear_errors();
-    
-    // Debug: Log all available element IDs in the SVG
-    $xpath = new DOMXPath($dom);
-    $allElements = $xpath->query('//*[@id]');
-    $availableIds = [];
-    foreach ($allElements as $element) {
-        $availableIds[] = $element->getAttribute('id');
+/**
+ * Extract center and radius from SVG path data
+ * Handles both absolute and relative path commands
+ */
+function extractPathCenterAndRadius($d) {
+    // Clean up and extract numeric values
+    if (empty($d)) return null;
+    preg_match_all('/-?\d*\.?\d+/', $d, $matches);
+    $nums = array_map('floatval', $matches[0]);
+    if (count($nums) < 4) return null;
+
+    // Split into coordinate pairs
+    $points = [];
+    for ($i = 0; $i < count($nums) - 1; $i += 2) {
+        $points[] = ['x' => $nums[$i], 'y' => $nums[$i + 1]];
     }
-    error_log("Available SVG element IDs: " . implode(', ', $availableIds));
-    
-    // Update each pin with coordinates from SVG
-    foreach ($pins as &$pin) {
-        if (isset($pin['svgId'])) {
-            // Try getElementById first
-            $svgElement = $dom->getElementById($pin['svgId']);
-            
-            // If getElementById fails, try XPath as fallback
-            if (!$svgElement) {
-                $xpath = new DOMXPath($dom);
-                $elements = $xpath->query("//*[@id='{$pin['svgId']}']");
-                if ($elements->length > 0) {
-                    $svgElement = $elements->item(0);
-                    error_log("Found element using XPath fallback for {$pin['svgId']}");
-                }
-            }
-            
-            if ($svgElement) {
-                // Debug: Log element attributes
-                $elementInfo = [
-                    'tagName' => $svgElement->tagName,
-                    'cx' => $svgElement->getAttribute('cx'),
-                    'cy' => $svgElement->getAttribute('cy'),
-                    'x' => $svgElement->getAttribute('x'),
-                    'y' => $svgElement->getAttribute('y'),
-                    'transform' => $svgElement->getAttribute('transform'),
-                    'd' => $svgElement->getAttribute('d')
-                ];
-                error_log("Element {$pin['svgId']} attributes: " . json_encode($elementInfo));
-                
-                // Try to get position from different attributes
-                $positionX = 0;
-                $positionY = 0;
-                
-                if ($svgElement->getAttribute('cx') && $svgElement->getAttribute('cy')) {
-                    // Circle element
-                    $positionX = floatval($svgElement->getAttribute('cx'));
-                    $positionY = floatval($svgElement->getAttribute('cy'));
-                    error_log("Using circle coordinates: cx=$positionX, cy=$positionY");
-                } elseif ($svgElement->getAttribute('x') && $svgElement->getAttribute('y')) {
-                    // Rectangle or other positioned element
-                    $positionX = floatval($svgElement->getAttribute('x'));
-                    $positionY = floatval($svgElement->getAttribute('y'));
-                    error_log("Using rect coordinates: x=$positionX, y=$positionY");
-                } elseif ($svgElement->getAttribute('transform')) {
-                    // Element with transform - extract translate values
-                    $transform = $svgElement->getAttribute('transform');
-                    if (preg_match('/translate\(([^,]+),\s*([^)]+)\)/', $transform, $matches)) {
-                        $positionX = floatval($matches[1]);
-                        $positionY = floatval($matches[2]);
-                        error_log("Using transform coordinates: x=$positionX, y=$positionY");
-                    }
-                } elseif ($svgElement->getAttribute('d')) {
-                    // Path element - extract center from path data
-                    $pathData = $svgElement->getAttribute('d');
-                    $coordinates = extractPathCenter($pathData);
-                    if ($coordinates) {
-                        $positionX = $coordinates['x'];
-                        $positionY = $coordinates['y'];
-                        error_log("Using path center coordinates: x=$positionX, y=$positionY");
-                    }
-                } else {
-                    // Try to get bounding box if no direct coordinates
-                    $bbox = $svgElement->getBBox();
-                    if ($bbox && $bbox->width > 0 && $bbox->height > 0) {
-                        $positionX = $bbox->x + ($bbox->width / 2);
-                        $positionY = $bbox->y + ($bbox->height / 2);
-                        error_log("Using bbox center coordinates: x=$positionX, y=$positionY");
-                    }
-                }
-                
-                // Update pin position
-                $pin['position_x'] = $positionX;
-                $pin['position_y'] = $positionY;
-                error_log("Final coordinates for pin {$pin['pin_name']} (svgId: {$pin['svgId']}): x=$positionX, y=$positionY");
+
+    // Compute bounding box
+    $xs = array_column($points, 'x');
+    $ys = array_column($points, 'y');
+    $minX = min($xs);
+    $maxX = max($xs);
+    $minY = min($ys);
+    $maxY = max($ys);
+    $bboxCx = ($minX + $maxX) / 2;
+    $bboxCy = ($minY + $maxY) / 2;
+    $bboxR  = min(($maxX - $minX), ($maxY - $minY)) / 2;
+
+    // Detect absolute vs relative path
+    $isRelative = (strpos($d, 'c') !== false || strpos($d, 'm') !== false);
+
+    if ($isRelative) {
+        // Case 1: Relative small pin circle
+        $cx = $bboxCx;
+        $cy = $bboxCy;
+        $r  = $bboxR;
+    } else {
+        // Case 2: Absolute circular shape (double-circle style)
+        // Use average of outer "M" move and inner "M" if exists
+        if (preg_match_all('/M\s*([0-9\.\-]+),\s*([0-9\.\-]+)/', $d, $mCoords)) {
+            $mx = array_map('floatval', $mCoords[1]);
+            $my = array_map('floatval', $mCoords[2]);
+            if (count($mx) > 1) {
+                // Outer and inner circle M positions (typical in Fritzing)
+                $cx = ($mx[0] + $mx[1]) / 2;
+                $cy = ($my[0] + $my[1]) / 2;
+                $r  = abs($my[0] - $my[1]) / 2;
             } else {
-                error_log("SVG element not found for pin {$pin['pin_name']} (svgId: {$pin['svgId']})");
-                error_log("Looking for ID: {$pin['svgId']} but available IDs are: " . implode(', ', $availableIds));
+                // Single-circle fallback → use bounding box
+                $cx = $bboxCx;
+                $cy = $bboxCy;
+                $r  = $bboxR;
             }
+        } else {
+            $cx = $bboxCx;
+            $cy = $bboxCy;
+            $r  = $bboxR;
         }
     }
-    
-    return $pins;
+
+    // Clamp very small or invalid radii
+    if ($r <= 0) $r = 0.5;
+    if ($r > 1000) $r = 10;
+
+    return ['cx' => $cx, 'cy' => $cy, 'r' => $r];
 }
+
 
 /**
  * Extract center coordinates from SVG path data
@@ -700,7 +1819,7 @@ function getPinColor($pinName) {
 /**
  * Get pin stroke color based on pin name/type
  */
-function getPinStrokeColor($pinName) {
+function getPinStrokeColor($pinName, $groupName) {
     $name = strtoupper($pinName);
     
     // Ground pins - black stroke
@@ -733,6 +1852,20 @@ function getPinStrokeColor($pinName) {
     if (in_array($name, ['RST', 'RESET', 'AREF'])) {
         return '#800080'; // Purple
     }
+
+    if($groupName === "Digital") {
+        return '#00ff00'; // Green
+    } elseif($groupName === "Analog") {
+        return '#ffd700'; // Yellow
+    } elseif($groupName === "Power") {
+        return '#ff6b6b'; // Red
+    } elseif($groupName === "Ground") {
+        return '#000000'; // Black
+    } elseif($groupName === "Communication") {
+        return '#0000ff'; // Blue
+    } elseif($groupName === "Special") {
+        return '#800080'; // Purple
+    }
     
     // Default - gray stroke
     return '#666666'; // Gray
@@ -748,25 +1881,22 @@ function makeSVGClickable($svgContent, $pins, $pinMap) {
     // Add CSS styles for clickable pins
     $style = $dom->createElement('style');
     $style->textContent = '
-        .pin-hole {
+        .pin-hole, .pin-rect {
             cursor: pointer !important;
             stroke-width: 2 !important;
             transition: all 0.2s ease !important;
             pointer-events: all !important;
-            z-index: 1000 !important;
         }
-        .pin-hole:hover {
+        .pin-hole:hover, .pin-rect:hover {
             stroke-width: 3 !important;
             opacity: 0.8 !important;
         }
-        .pin-hole.selected {
+        .pin-hole.selected, .pin-rect.selected {
             stroke-width: 4 !important;
             fill: rgba(0, 0, 255, 0.6) !important;
         }
-        .pin-hole.hidden {
-            display: none !important;
-        }
-        /* Group-specific colors */
+        .pin-hole.hidden, .pin-rect.hidden { display: none !important; }
+        svg { overflow: visible !important; }
         .pin-hole.group-ground { stroke: #000000 !important; }
     ';
     
@@ -808,7 +1938,7 @@ function makeSVGClickable($svgContent, $pins, $pinMap) {
                 
                 // Set pin-specific color based on pin name
                 $pinColor = getPinColor($pinName);
-                $pinStrokeColor = getPinStrokeColor($pinName);
+                $pinStrokeColor = getPinStrokeColor($pinName, groupName: $groupName);
                 $existingElement->setAttribute('fill', $pinColor);
                 $existingElement->setAttribute('stroke', $pinStrokeColor);
                 $existingElement->setAttribute('stroke-width', '2');
@@ -847,14 +1977,17 @@ function determinePinGroup($pinName) {
     $pinName = strtoupper($pinName);
     
     // Ground pins - separate group
-    if (strpos($pinName, 'GND') !== false || strpos($pinName, 'GROUND') !== false) {
+    if (strpos($pinName, 'GND') !== false || strpos($pinName, 'GROUND') !== false ||
+    strpos($pinName, 'VSS') !== false  ) {
         return 'Ground';
     }
     
     // Power pins (excluding GND)
     if (strpos($pinName, 'VCC') !== false || 
+        strpos($pinName, 'VDD') !== false ||
         strpos($pinName, 'VIN') !== false || 
         strpos($pinName, '3.3V') !== false || 
+        strpos($pinName, '3V3') !== false || 
         strpos($pinName, '5V') !== false) {
         return 'Power';
     }
@@ -884,6 +2017,8 @@ function determinePinGroup($pinName) {
     if (strpos($pinName, 'RESET') !== false || 
         strpos($pinName, 'RST') !== false ||
         strpos($pinName, 'AREF') !== false ||
+        strpos($pinName, 'VREF') !== false ||
+        strpos($pinName, 'IOREF') !== false ||
         strpos($pinName, 'CLK') !== false || 
         strpos($pinName, 'CLOCK') !== false) {
         return 'Special';
@@ -902,8 +2037,10 @@ function getPinFunctions($pinName) {
     if ($pinName === 'GND') {
         return 'Ground';
     } elseif (strpos($pinName, 'VCC') !== false || 
+              strpos($pinName, 'VDD') !== false ||
               strpos($pinName, 'VIN') !== false || 
               strpos($pinName, '3.3V') !== false || 
+              strpos($pinName, '3V3') !== false ||
               strpos($pinName, '5V') !== false) {
         return 'Power Supply';
     } elseif (strpos($pinName, 'SDA') !== false) {
